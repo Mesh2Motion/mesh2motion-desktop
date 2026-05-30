@@ -11,20 +11,13 @@ git pull origin main
 Write-Host "Installing dependencies..." -ForegroundColor Cyan
 npm ci --prefer-offline
 
-Write-Host "Building web app..." -ForegroundColor Cyan
+Write-Host "Building Mesh2Motion app..." -ForegroundColor Cyan
 npm run build
 
+# return to main desktop project directory
 Set-Location -Path ".."
 
-Write-Host "Building Desktop App with Pake..." -ForegroundColor Green
-pake "./mesh2motion-app/dist/index.html" `
-    --name "Mesh2Motion" `
-    --width 1440 `
-    --height 900 `
-    --icon "./public/icon.png" `
-    --enable-drag-drop `
-    --hide-title-bar `
-    --keep-binary
+Write-Host "Building with Tauri..." -ForegroundColor Green
+npx tauri build
 
 Write-Host "Build completed!" -ForegroundColor Green
-Write-Host "Portable EXE should be available as: Mesh2Motion.exe" -ForegroundColor Green

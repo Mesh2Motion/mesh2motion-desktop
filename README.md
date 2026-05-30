@@ -5,21 +5,20 @@
 - Node.js (v18 or higher recommended)
 - Rust (https://rustup.rs/). After running with prompt, install standard installation.
 
+Note: If "rustc --version" isn't found, try to run this command to force powershell to refresh environment variables (Windows)
 
-## Step 2: Install Pake CLI
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
-Pake  
-    npm install -g pake-cli
 
-test installation: pake --version
-
-## Step 3: Clone the Mesh2Motion desktop repository with submodule (M2M app)
+## Step 2: Clone the Mesh2Motion desktop repository with submodule (M2M app)
 
     git clone --recurse-submodules https://github.com/Mesh2Motion/mesh2motion-desktop.git
     cd mesh2motion-desktop
 
 # 2. Install dependencies and build
     npm install
+    npx tauri init
+    npx tauri dev
     npm run build:desktop
 
 Note: The first build will be very slow. This is because Rust needs to download and compile a bunch of components. Take a snack break and come back.
@@ -28,7 +27,6 @@ Note: The first build will be very slow. This is because Rust needs to download 
 
 The built desktop application will be generated in the current folder:
 
-- macOS: .dmg installer + .app
-- Windows: .exe installer
-- Linux: .deb package or AppImage
+- Windows: .exe portable runner
+
 

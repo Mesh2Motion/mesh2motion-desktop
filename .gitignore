@@ -1,9 +1,9 @@
 # Build outputs
-build/
 dist/
-*.dmg
+src-tauri/target/
 *.exe
-*.deb
+*.msi
+*.dmg
 *.AppImage
 
 # Dependencies
@@ -11,12 +11,6 @@ node_modules/
 pnpm-lock.yaml
 package-lock.json
 
-# Pake / Tauri temporary files
-src-tauri/
-
-# Logs
-*.log
-
-# OS files
+# OS
 .DS_Store
 Thumbs.db

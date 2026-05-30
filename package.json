@@ -1,11 +1,19 @@
 {
   "name": "mesh2motion-desktop",
   "version": "1.0.0",
-  "description": "Desktop wrapper for Mesh2Motion",
+  "description": "Desktop application for Mesh2Motion using Tauri",
+  "author": "Your Name",
+  "license": "MIT",
   "scripts": {
+    "build:web": "cd mesh2motion-web && npm run build",
     "build:desktop": "powershell -ExecutionPolicy Bypass -File ./scripts/build-desktop.ps1",
     "update:web": "git submodule update --remote --merge",
+    "tauri:dev": "cd mesh2motion-web && npm run build && cd .. && cargo tauri dev",
+    "tauri:build": "cargo tauri build",
     "postinstall": "git submodule update --init --recursive"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
 }

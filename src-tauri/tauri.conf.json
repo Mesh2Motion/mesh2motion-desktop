@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Mesh2Motion",
+  "version": "0.1.0",
+  "identifier": "com.mesh2motion.tauri-app",
+  "build": {
+    "devUrl": null,
+    "frontendDist": "../mesh2motion-app/dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Mesh2Motion",
+        "width": 800,
+        "height": 600
+      }
+    ]
+  }
+}
