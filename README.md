@@ -34,8 +34,7 @@ Note: The first build will be very slow. This is because Rust needs to download 
 
 ## Step 4: Find Your App
 
-The built desktop application will be generated in the current folder:
+The built desktop application will be generated in the folder:
 
-- Windows: .exe 
-
+src-tauri > target > release > tauri-app.exe
 
