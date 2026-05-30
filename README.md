@@ -1,8 +1,9 @@
 # Build Desktop Application (Using Pake)
 
-Prerequisites
+## Step 1: Prerequisites
 - Git
 - Node.js (v18 or higher recommended)
+- Rust (https://rustup.rs/). After running with prompt, install standard installation.
 
 
 ## Step 2: Install Pake CLI
@@ -20,6 +21,8 @@ test installation: pake --version
 # 2. Install dependencies and build
     npm install
     npm run build:desktop
+
+Note: The first build will be very slow. This is because Rust needs to download and compile a bunch of components. Take a snack break and come back.
 
 ## Step 4: Find Your App
 

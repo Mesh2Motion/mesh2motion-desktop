@@ -1,9 +1,11 @@
 {
   "name": "mesh2motion-desktop",
   "version": "1.0.0",
+  "description": "Desktop wrapper for Mesh2Motion",
   "scripts": {
     "build:desktop": "powershell -ExecutionPolicy Bypass -File ./scripts/build-desktop.ps1",
     "update:web": "git submodule update --remote --merge",
     "postinstall": "git submodule update --init --recursive"
-  }
+  },
+  "dependencies": {}
 }
