@@ -1,0 +1,3 @@
+[submodule "mesh2motion-app"]
+	path = mesh2motion-app
+	url = https://github.com/Mesh2Motion/mesh2motion-app.git
