@@ -6,7 +6,8 @@
   "license": "MIT",
   "scripts": {
     "build:web": "cd mesh2motion-web && npm run build",
-    "build:desktop": "powershell -ExecutionPolicy Bypass -File ./scripts/build-desktop.ps1",
+    "build:desktop-linux": "sh ./scripts/build-desktop.sh",
+    "build:desktop-windows": "powershell -ExecutionPolicy Bypass -File ./scripts/build-desktop.ps1",
     "update:web": "git submodule update --remote --merge",
     "tauri": "tauri",
     "tauri:dev": "cd mesh2motion-web && npm run build && cd .. && cargo tauri dev",

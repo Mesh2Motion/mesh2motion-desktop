@@ -28,7 +28,14 @@ Note: If "rustc --version" isn't found, try to run this command to force powersh
     npm install
     npx tauri init
     npx tauri dev
-    npm run build:desktop
+
+**if on windows**
+
+    npm run build:desktop-windows   
+
+**if on linux**
+
+    npm run build:desktop-linux   
 
 Note: The first build will be very slow. This is because Rust needs to download and compile a bunch of components. Take a snack break and come back.
 
