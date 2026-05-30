@@ -1,9 +1,18 @@
-# Build Desktop Application (Using Pake)
+# Mesh2Motion Desktop Application (WIP)
+
+This is project that isn't fully functioning yet that allows an offline version application for Mesh2Motion. It uses the "Tauri" framework to build it (https://v2.tauri.app/). It is like electron, but creates much smaller binaries. 
+
+The current limitations that need to be addressed are the following:
+- Downloads don't work. Need to figure out how file system stuff works with Tauri
+- Only have tried this on Windows. 
+- Need updated icons
+- Need to disable/hide things that break when the internet is not available
+- probably more things once those issues are taken care of.
 
 ## Step 1: Prerequisites
 - Git
 - Node.js (v18 or higher recommended)
-- Rust (https://rustup.rs/). After running with prompt, install standard installation.
+- Rust (https://rustup.rs/)
 
 Note: If "rustc --version" isn't found, try to run this command to force powershell to refresh environment variables (Windows)
 
@@ -27,6 +36,6 @@ Note: The first build will be very slow. This is because Rust needs to download 
 
 The built desktop application will be generated in the current folder:
 
-- Windows: .exe portable runner
+- Windows: .exe 
 
 
