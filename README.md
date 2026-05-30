@@ -3,10 +3,10 @@
 This is project that isn't fully functioning yet that allows an offline version application for Mesh2Motion. It uses the "Tauri" framework to build it (https://v2.tauri.app/). It is like electron, but creates much smaller binaries. 
 
 The current limitations that need to be addressed are the following:
-- Downloads don't work. Need to figure out how file system stuff works with Tauri
+- Downloading animations automatically goes to "Downloads" folder. Should change this to a 'save as' dialog
 - Only have tried this on Windows. 
-- Need updated icons
 - Need to disable/hide things that break when the internet is not available
+- Currently outputting the development build, so it has dev tools available (Ctrl+Shift+I)
 - probably more things once those issues are taken care of.
 
 ## Step 1: Prerequisites
