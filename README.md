@@ -26,8 +26,7 @@ Note: If "rustc --version" isn't found, try to run this command to force powersh
 
 # 2. Install dependencies and build
     npm install
-    npx tauri init
-    npx tauri dev
+    npx tauri dev   (not sure if this command is actually needed)
 
 **if on windows**
 
