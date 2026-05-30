@@ -8,6 +8,7 @@
     "build:web": "cd mesh2motion-web && npm run build",
     "build:desktop": "powershell -ExecutionPolicy Bypass -File ./scripts/build-desktop.ps1",
     "update:web": "git submodule update --remote --merge",
+    "tauri": "tauri",
     "tauri:dev": "cd mesh2motion-web && npm run build && cd .. && cargo tauri dev",
     "tauri:build": "cargo tauri build",
     "postinstall": "git submodule update --init --recursive"

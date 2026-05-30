@@ -42,3 +42,10 @@ src-tauri > target > release > tauri-app.exe
 (debug build that has developer tools enabled - default for now)
 src-tauri > target > debug > tauri-app.exe
 
+
+
+# Other 
+
+When generating the application icon, you don't need to create all the versions. Update the "app-icon.png". Then run the following command
+
+    npm run tauri icon

@@ -1,5 +1,5 @@
 [package]
-name = "Mesh2Motion Desktop"
+name = "Mesh2Motion-Desktop"
 version = "0.1.0"
 description = "Mesh2Motion Desktop"
 authors = ["Scott Petrovic"]

@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "Mesh2Motion"
+name = "Mesh2Motion-Desktop"
 version = "0.1.0"
 dependencies = [
  "serde",
