@@ -17,7 +17,8 @@ npm run build
 # return to main desktop project directory
 Set-Location -Path ".."
 
-Write-Host "Building with Tauri..." -ForegroundColor Green
-npx tauri build
+Write-Host "Building with Tauri with dev tools enabled..." -ForegroundColor Green
+# replace with "npx tauri build" for normal (smaller) release build 
+npx tauri build -- --debug
 
 Write-Host "Build completed!" -ForegroundColor Green

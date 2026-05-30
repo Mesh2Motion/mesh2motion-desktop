@@ -36,5 +36,9 @@ Note: The first build will be very slow. This is because Rust needs to download 
 
 The built desktop application will be generated in the folder:
 
+(release build)
 src-tauri > target > release > tauri-app.exe
+
+(debug build that has developer tools enabled - default for now)
+src-tauri > target > debug > tauri-app.exe
 
