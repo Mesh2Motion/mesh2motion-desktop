@@ -23,6 +23,6 @@ cd ..
 
 echo "Building with Tauri with dev tools enabled..."
 # replace with "npx tauri build" for normal (smaller) release build
-npx tauri build -- --debug
+SHELL=bash npx tauri build
 
 echo "Build completed!"
