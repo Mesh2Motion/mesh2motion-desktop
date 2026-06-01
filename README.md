@@ -32,7 +32,7 @@ Note: If "rustc --version" isn't found, try to run this command to force powersh
 
     npm run build:desktop-windows   
 
-**if on linux**
+**if on linux/MacOS**
 
     npm run build:desktop-linux   
 
