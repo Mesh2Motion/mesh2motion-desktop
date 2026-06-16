@@ -53,9 +53,17 @@ src-tauri > target > release > tauri-app.exe
 src-tauri > target > debug > tauri-app.exe
 
 
+# Doing a release build (WIP)
+
+All the final binaries are made with github actions. These spin up build agents that do the work. The .github/workflows/release.yml configures this.
+This process should automatically run since the repository is in Github. A new build kicks off when a version tag is added and pushed to the repository
+
+
 
 # Other 
 
 When generating the application icon, you don't need to create all the versions. Update the "app-icon.png". Then run the following command
 
     npm run tauri icon
+
+If you decide to update Node.js, we need to make sure to update the .github workflow to also use that.
