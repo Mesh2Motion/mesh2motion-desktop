@@ -5,8 +5,8 @@
   "author": "Your Name",
   "license": "MIT",
   "scripts": {
-    "build:desktop-linux": "sh ./scripts/build-desktop.sh",
-    "build:desktop-windows": "powershell -ExecutionPolicy Bypass -File ./scripts/build-desktop.ps1",
+    "build:linux": "sh ./scripts/build-desktop.sh",
+    "build:windows": "powershell -ExecutionPolicy Bypass -File ./scripts/build-desktop.ps1",
     "update:web": "git submodule update --remote --merge",
     "tauri": "tauri",
     "tauri:build": "cargo tauri build",
