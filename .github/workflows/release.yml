@@ -13,12 +13,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # macOS signing: Apple Developer Program membership required — $99/year (~$8.25/month)
+          # Provides a Developer ID certificate for signing + notarization via Xcode/altool
           - platform: macos-latest
             args: '--target aarch64-apple-darwin'
           - platform: macos-latest
             args: '--target x86_64-apple-darwin'
+          # Linux signing: no standard paid signing required; GPG signing is free
           - platform: ubuntu-22.04
             args: ''
+          # Windows signing: Azure Trusted Signing ~$9.99/month, or OV/EV certificate ~$200-500/year from DigiCert/Sectigo etc.
           - platform: windows-latest
             args: ''
 
@@ -82,17 +86,17 @@ jobs:
             |---|---|
             | Windows (installer) | `Mesh2Motion_${{ github.ref_name }}_x64-setup.exe` |
             | Windows (portable) | `Mesh2Motion_${{ github.ref_name }}_x64_portable.exe` |
-            | macOS (Apple Silicon) | `Mesh2Motion_xx_aarch64.dmg` |
-            | macOS (Intel) | `Mesh2Motion_xx_x64.dmg` |
-            | Linux (Debian/Ubuntu) | `Mesh2Motion_xx_amd64.deb` |
-            | Linux (Universal) | `Mesh2Motion_xx_amd64.AppImage` |
+            | macOS (Apple Silicon) | `Mesh2Motion_${{ github.ref_name }}_aarch64.dmg` |
+            | macOS (Intel) | `Mesh2Motion_${{ github.ref_name }}_x64.dmg` |
+            | Linux (Debian/Ubuntu) | `Mesh2Motion_${{ github.ref_name }}_amd64.deb` |
+            | Linux (Universal) | `Mesh2Motion_${{ github.ref_name }}_amd64.AppImage` |
 
             ### Notes
             - **macOS** — right-click → Open on first launch to bypass Gatekeeper
-            - **Linux AppImage** — run `chmod +x Mesh2Motion_xx_amd64.AppImage` before launching
+            - **Linux AppImage** — run `chmod +x Mesh2Motion_${{ github.ref_name }}_amd64.AppImage` before launching
             - **Windows** — no installation required; if SmartScreen appears, click "More info" → "Run anyway"
 
-            > **Note:** `.app.tar.gz` files are used internally by the auto-updater and do not need to be downloaded manually.
+            > **Note:** `Mesh2Motion app.tar.gz` files are used internally by the auto-updater and do not need to be downloaded manually.
 
           releaseDraft: true # review and publish artifacts manually
           prerelease: false  # Set true for alpha/beta tags
