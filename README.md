@@ -12,11 +12,9 @@ The current limitations that need to be addressed are the following:
 ## Step 1: Prerequisites
 - Git
 - Node.js (v18 or higher recommended)
-- Rust (https://rustup.rs/)
+- Rust (https://rustup.rs/). Use standard installation process
 
-Note: If "rustc --version" isn't found, try to run this command to force powershell to refresh environment variables (Windows)
-
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+Note: If "rustc --version" isn't found while testing Rust installation...and you are using something like visual studio code, close down visual studio code and restart
 
 
 ## Step 2: Clone the Mesh2Motion desktop repository with submodule (M2M app)
