@@ -80,7 +80,8 @@ jobs:
 
             | Platform | File |
             |---|---|
-            | Windows | `Mesh2Motion_xx_x64-setup.exe` |
+            | Windows (installer) | `Mesh2Motion_${{ github.ref_name }}_x64-setup.exe` |
+            | Windows (portable) | `Mesh2Motion_${{ github.ref_name }}_x64_portable.exe` |
             | macOS (Apple Silicon) | `Mesh2Motion_xx_aarch64.dmg` |
             | macOS (Intel) | `Mesh2Motion_xx_x64.dmg` |
             | Linux (Debian/Ubuntu) | `Mesh2Motion_xx_amd64.deb` |
@@ -89,7 +90,7 @@ jobs:
             ### Notes
             - **macOS** — right-click → Open on first launch to bypass Gatekeeper
             - **Linux AppImage** — run `chmod +x Mesh2Motion_xx_amd64.AppImage` before launching
-            - **Windows** — if SmartScreen appears, click "More info" → "Run anyway"
+            - **Windows** — no installation required; if SmartScreen appears, click "More info" → "Run anyway"
 
             > **Note:** `.app.tar.gz` files are used internally by the auto-updater and do not need to be downloaded manually.
 
@@ -97,3 +98,13 @@ jobs:
           prerelease: false  # Set true for alpha/beta tags
           args: ${{ matrix.args }} # Passes the --target flag per platform from the matrix
           projectPath: ./src-tauri # Path to the Tauri project, adjust if your Tauri project is in a subdirectory
+
+      - name: Upload Windows portable EXE
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $assetName = "Mesh2Motion_${{ github.ref_name }}_x64_portable.exe"
+          Copy-Item "src-tauri/target/release/mesh2motion.exe" $assetName
+          gh release upload "${{ github.ref_name }}" $assetName --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
