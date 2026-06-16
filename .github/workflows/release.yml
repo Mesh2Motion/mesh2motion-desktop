@@ -72,8 +72,27 @@ jobs:
           APPLE_SIGNING_IDENTITY: '-'   # Temporary ad-hoc signing, no certificate needed (will probably have to change this later)
         with:
           tagName: ${{ github.ref_name }} # The tag that triggered the workflow, e.g. v1.2.0
-          releaseName: 'Release ${{ github.ref_name }}' # e.g. Release v1.2.0
-          releaseBody: 'See CHANGELOG for details.'
+          releaseName: 'Mesh2Motion Desktop ${{ github.ref_name }}' # e.g. Release v1.2.0
+          releaseBody: |
+            ## What do I pick?
+
+            Download the file for your operating system:
+
+            | Platform | File |
+            |---|---|
+            | Windows | `Mesh2Motion_xx_x64-setup.exe` |
+            | macOS (Apple Silicon) | `Mesh2Motion_xx_aarch64.dmg` |
+            | macOS (Intel) | `Mesh2Motion_xx_x64.dmg` |
+            | Linux (Debian/Ubuntu) | `Mesh2Motion_xx_amd64.deb` |
+            | Linux (Universal) | `Mesh2Motion_xx_amd64.AppImage` |
+
+            ### Notes
+            - **macOS** — right-click → Open on first launch to bypass Gatekeeper
+            - **Linux AppImage** — run `chmod +x Mesh2Motion_xx_amd64.AppImage` before launching
+            - **Windows** — if SmartScreen appears, click "More info" → "Run anyway"
+
+            > **Note:** `.app.tar.gz` files are used internally by the auto-updater and do not need to be downloaded manually.
+
           releaseDraft: true # review and publish artifacts manually
           prerelease: false  # Set true for alpha/beta tags
           args: ${{ matrix.args }} # Passes the --target flag per platform from the matrix
