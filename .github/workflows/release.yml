@@ -64,4 +64,4 @@ jobs:
           releaseDraft: true # review and publish artifacts manually
           prerelease: true # Set true for alpha/beta tags
           args: ${{ matrix.args }} # Passes the --target flag per platform from the matrix
-          projectPath: *./src-tauri # Path to the Tauri project, adjust if your Tauri project is in a subdirectory
+          projectPath: ./src-tauri # Path to the Tauri project, adjust if your Tauri project is in a subdirectory

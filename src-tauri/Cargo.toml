@@ -1,6 +1,6 @@
 [package]
 name = "Mesh2Motion-Desktop"
-version = "0.1.0"
+version = "0.1.1"
 description = "Mesh2Motion Desktop"
 authors = ["Scott Petrovic"]
 edition = "2021"

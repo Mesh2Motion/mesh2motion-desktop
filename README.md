@@ -59,6 +59,17 @@ All the final binaries are made with github actions. These spin up build agents 
 This process should automatically run since the repository is in Github. A new build kicks off when a version tag is added and pushed to the repository
 
 
+The process for doing a new release should be as follows:
+
+1. Update the src/tauri/tauri.conf.json and src-tauri/cargo.toml to new version
+2. Add the files to staging in GIT: git add .
+3. Create a commit in GIT similar to this: git commit -m "chore: release v0.1.0"
+4. Create tag for release: git tag v0.1.0
+5. push tag to Github: git push origin main --tags
+
+
+Github Actions. If you go onto Github.com project, there is an "Actions" tab where you can see the work it does.
+
 
 # Other 
 
