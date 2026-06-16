@@ -25,7 +25,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive   # grab mesh2motion-app sub-module code base
 
@@ -37,7 +37,7 @@ jobs:
           git pull origin main
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
 
@@ -69,11 +69,12 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_SIGNING_IDENTITY: '-'   # Temporary ad-hoc signing, no certificate needed (will probably have to change this later)
         with:
           tagName: ${{ github.ref_name }} # The tag that triggered the workflow, e.g. v1.2.0
           releaseName: 'Release ${{ github.ref_name }}' # e.g. Release v1.2.0
           releaseBody: 'See CHANGELOG for details.'
           releaseDraft: true # review and publish artifacts manually
-          prerelease: true # Set true for alpha/beta tags
+          prerelease: false  # Set true for alpha/beta tags
           args: ${{ matrix.args }} # Passes the --target flag per platform from the matrix
           projectPath: ./src-tauri # Path to the Tauri project, adjust if your Tauri project is in a subdirectory
