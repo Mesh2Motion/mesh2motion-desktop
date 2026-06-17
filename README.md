@@ -70,6 +70,20 @@ The process for doing a new release should be as follows:
 
 Github Actions. If you go onto Github.com project, there is an "Actions" tab where you can see the work it does.
 
+### potential errors
+You might get an error building with Github actions like this "fatal: refusing to merge unrelated histories"
+This means submodule (M2M web app) is old on your computer. Go into the mesh2motion-app folder and make sure you are on the "main" branch
+
+    cd mesh2motion-app
+    git checkout main
+
+Then do the following to get the latest and get back to the project root:
+
+    git pull --rebase
+    cd ../
+
+Push those changes out and try to kick off another build.
+
 
 # Other 
 
