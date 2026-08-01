@@ -61,6 +61,7 @@ This process should automatically run since the repository is in Github. A new b
 
 The process for doing a new release should be as follows:
 
+0. Update the submodule (m2m app to the latest): git submodule update --remote --recursive
 1. Update the src-tauri/tauri.conf.json and src-tauri/cargo.toml to new version
 2. Add the files to staging in GIT: git add .
 3. Create a commit in GIT similar to this: git commit -m "chore: release v0.1.0"

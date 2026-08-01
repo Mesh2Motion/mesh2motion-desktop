@@ -35,10 +35,11 @@ jobs:
 
 
       # each "run" command starts fresh with the path, so we don't need to worry about cd'ing back to the root for each step
-      - name: Pull latest submodule
+
+      # update to latest submodule commit (in case the submodule is not pointing to the latest commit in the main repo)
+      - name: Update submodule
         run: |
-          cd mesh2motion-app
-          git pull origin main
+          git submodule update --remote --recursive
 
       - name: Install Node.js
         uses: actions/setup-node@v5
