@@ -36,11 +36,6 @@ jobs:
 
       # each "run" command starts fresh with the path, so we don't need to worry about cd'ing back to the root for each step
 
-      # update to latest submodule commit (in case the submodule is not pointing to the latest commit in the main repo)
-      - name: Update submodule
-        run: |
-          git submodule update --remote --recursive
-
       - name: Install Node.js
         uses: actions/setup-node@v5
         with:
@@ -71,7 +66,7 @@ jobs:
           npm run build
 
       - name: Build and release
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPLE_SIGNING_IDENTITY: '-'   # Temporary ad-hoc signing, no certificate needed (will probably have to change this later)
