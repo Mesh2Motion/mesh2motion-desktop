@@ -1,6 +1,6 @@
 pkgbase=mesh2motion-git
 pkgname=('mesh2motion-git' 'mesh2motion-mcp-git')
-pkgver=0.1.10.r51.gf015d4f
+pkgver=0.1.10.r53.gf015d4f
 pkgrel=1
 pkgdesc='Native Mesh2Motion desktop application for Arch Linux'
 arch=('x86_64')
@@ -32,7 +32,7 @@ source=(
 sha256sums=('SKIP' 'SKIP'
             'e125a2736b0fef332bdc7e86ecee10f64d82d10071a65fe593a3bfe1885033be'
             '9e0ac374a936bd27e912ab53f58acf17ed34c03131abd4fd5c8511e1a439e06f'
-            'cdb69dba7fbf6761966c8c07fff33ba431173e310fdfa806a9471b9ab5c3e47c')
+            '628b5bcd33efcbabf8461c573d78846242dcafff7b5b80de4b06391ce9502c16')
 
 prepare() {
   local tree="${srcdir}/mesh2motion"

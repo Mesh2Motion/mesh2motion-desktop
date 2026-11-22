@@ -1,6 +1,6 @@
 pkgbase = mesh2motion-git
 	pkgdesc = Native Mesh2Motion desktop application for Arch Linux
-	pkgver = 0.1.10.r51.gf015d4f
+	pkgver = 0.1.10.r53.gf015d4f
 	pkgrel = 1
 	url = https://github.com/Mesh2Motion/mesh2motion-desktop
 	arch = x86_64
@@ -23,7 +23,7 @@ pkgbase = mesh2motion-git
 	sha256sums = SKIP
 	sha256sums = e125a2736b0fef332bdc7e86ecee10f64d82d10071a65fe593a3bfe1885033be
 	sha256sums = 9e0ac374a936bd27e912ab53f58acf17ed34c03131abd4fd5c8511e1a439e06f
-	sha256sums = cdb69dba7fbf6761966c8c07fff33ba431173e310fdfa806a9471b9ab5c3e47c
+	sha256sums = 628b5bcd33efcbabf8461c573d78846242dcafff7b5b80de4b06391ce9502c16
 
 pkgname = mesh2motion-git
 	depends = gtk3
