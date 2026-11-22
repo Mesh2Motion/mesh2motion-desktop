@@ -564,7 +564,7 @@ fn mcp_publish_snapshot(snapshot: Value, state: State<'_, McpHostState>) -> Resu
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             app.manage(McpHostState::new());
@@ -582,8 +582,21 @@ pub fn run() {
             mcp_test_connection,
             mcp_host_paths
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    // Stop the optional MCP host at Tauri's explicit shutdown boundary so the
+    // listener thread can remove its socket before managed state is torn down.
+    app.run(|app_handle, event| {
+        if let tauri::RunEvent::Exit = event {
+            #[cfg(feature = "mcp-host")]
+            if let Some(state) = app_handle.try_state::<McpHostState>() {
+                if let Err(error) = state.disable() {
+                    eprintln!("M2M_HOST shutdown_error={error}");
+                }
+            }
+        }
+    });
 }
 
 #[cfg(test)]
