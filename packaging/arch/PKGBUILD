@@ -1,6 +1,6 @@
 pkgbase=mesh2motion-git
 pkgname=('mesh2motion-git' 'mesh2motion-mcp-git')
-pkgver=0.1.10.r0.ga765b5c
+pkgver=0.1.10.r50.g446b6e9
 pkgrel=1
 pkgdesc='Native Mesh2Motion desktop application for Arch Linux'
 arch=('x86_64')
@@ -8,10 +8,19 @@ url='https://github.com/Mesh2Motion/mesh2motion-desktop'
 license=('MIT' 'CC0-1.0')
 makedepends=('git' 'gtk3' 'webkit2gtk-4.1' 'nodejs' 'npm' 'openssl' 'rust>=1.88' 'pkgconf')
 
-_desktop_commit='a765b5c0f2636f0cd661879c9f3c23ee0bd8228a'
-_frontend_commit='c8511e5ff1083e089be340ac4dc7f0490b89a0b3'
+_desktop_commit='446b6e9dbb7402b9f7bd5cd93abd594114f01ed0'
+_frontend_commit='1e22543b4a2a5cf6ebda7866af52c1c3048d673c'
 _desktop_repo="${M2M_DESKTOP_GIT_URL:-https://github.com/Mesh2Motion/mesh2motion-desktop.git}"
 _frontend_repo="${M2M_FRONTEND_GIT_URL:-https://github.com/Mesh2Motion/mesh2motion-app.git}"
+
+pkgver() {
+  cd "${srcdir}/mesh2motion"
+  local app_version revision short
+  app_version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' src-tauri/Cargo.toml | head -n1)"
+  revision="$(git rev-list --count "${_desktop_commit}")"
+  short="$(git rev-parse --short=7 "${_desktop_commit}")"
+  printf '%s.r%s.g%s' "${app_version}" "${revision}" "${short}"
+}
 
 source=(
   "mesh2motion::git+${_desktop_repo}#commit=${_desktop_commit}"
@@ -30,9 +39,8 @@ prepare() {
   [[ "$(git -C "$tree" rev-parse HEAD)" == "${_desktop_commit}" ]]
   [[ "$(git -C "${srcdir}/frontend" rev-parse HEAD)" == "${_frontend_commit}" ]]
 
-  # Replace only the source tree's empty submodule checkout with the separately
-  # pinned frontend source; never initialize/update the submodule implicitly.
-  rm -rf "${tree}/mesh2motion-app"
+  # The Git source clone has an empty gitlink directory; copy the separately
+  # pinned frontend into it without initializing or updating the submodule.
   mkdir -p "${tree}/mesh2motion-app"
   cp -a "${srcdir}/frontend/." "${tree}/mesh2motion-app/"
 }
@@ -41,20 +49,17 @@ build() {
   local tree="${srcdir}/mesh2motion"
   local target="${srcdir}/cargo-target"
 
-  # Keep the host's temporary makepkg path out of Rust panic/source strings.
-  # A Cargo config array keeps spaces in Arch user's home paths intact.
-  mkdir -p "${srcdir}/.cargo"
-  cat > "${srcdir}/.cargo/config.toml" <<EOF
-[build]
-rustflags = ["--remap-path-prefix=${srcdir}=/usr/src/mesh2motion"]
-EOF
+  # Keep makepkg's temporary $srcdir out of compiler/debug path metadata.
+  # Cargo's encoded flag form preserves spaces in the user's home path.
+  export CARGO_ENCODED_RUSTFLAGS="--remap-path-prefix=${srcdir}=/usr/src/mesh2motion"
 
   cd "${tree}/mesh2motion-app"
-  npm ci --ignore-scripts
+  npm ci --ignore-scripts --no-audit --no-fund
   npm test -- --run
   npm run build
 
   CARGO_TARGET_DIR="$target" cargo build --locked --release \
+    --features mcp-host \
     --manifest-path "${tree}/src-tauri/Cargo.toml"
   CARGO_TARGET_DIR="$target" cargo build --locked --release \
     --manifest-path "${tree}/src-tauri/mcp-server/Cargo.toml"
