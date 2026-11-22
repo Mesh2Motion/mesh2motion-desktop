@@ -5,6 +5,10 @@ description = "Mesh2Motion Desktop"
 authors = ["Scott Petrovic"]
 edition = "2021"
 
+[features]
+default = []
+mcp-host = ["dep:mesh2motion-mcp", "mesh2motion-mcp/ipc-host"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
@@ -22,4 +26,5 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+mesh2motion-mcp = { path = "mcp-server", default-features = false, features = ["ipc-host"], optional = true }
 
