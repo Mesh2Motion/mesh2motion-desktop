@@ -1,6 +1,6 @@
 pkgbase=mesh2motion-git
 pkgname=('mesh2motion-git' 'mesh2motion-mcp-git')
-pkgver=0.1.10.r62.gcf80f75
+pkgver=0.1.10.r63.g8b9a79
 pkgrel=1
 pkgdesc='Native Mesh2Motion desktop application for Arch Linux'
 arch=('x86_64')
@@ -8,7 +8,7 @@ url='https://github.com/Mesh2Motion/mesh2motion-desktop'
 license=('MIT' 'CC0-1.0')
 makedepends=('git' 'gtk3' 'webkit2gtk-4.1' 'nodejs' 'npm' 'openssl' 'rust>=1.88' 'pkgconf')
 
-_desktop_commit='cf80f758e60b3f9943c80467175b0d1d986f55bf'
+_desktop_commit='8b9a795a1bde80a10a10e31a9d4cfac875edc634'
 _frontend_commit='8d2fa6e7e8fd74282a35eee93fff18c1790f1f19'
 _desktop_repo="${M2M_DESKTOP_GIT_URL:-https://github.com/Mesh2Motion/mesh2motion-desktop.git}"
 _frontend_repo="${M2M_FRONTEND_GIT_URL:-https://github.com/Mesh2Motion/mesh2motion-app.git}"
