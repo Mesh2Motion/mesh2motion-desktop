@@ -1,6 +1,6 @@
 pkgbase = mesh2motion-git
 	pkgdesc = Native Mesh2Motion desktop application for Arch Linux
-	pkgver = 0.1.10.r53.gf015d4f
+	pkgver = 0.1.10.r56.gd10017f
 	pkgrel = 1
 	url = https://github.com/Mesh2Motion/mesh2motion-desktop
 	arch = x86_64
@@ -14,8 +14,8 @@ pkgbase = mesh2motion-git
 	makedepends = openssl
 	makedepends = rust>=1.88
 	makedepends = pkgconf
-	source = mesh2motion::git+https://github.com/Mesh2Motion/mesh2motion-desktop.git#commit=f015d4f70fec75dfe5391eb08911240b622aae25
-	source = frontend::git+https://github.com/Mesh2Motion/mesh2motion-app.git#commit=0c92eec647fe5c948186346509ae0309d6ae2820
+	source = mesh2motion::git+https://github.com/Mesh2Motion/mesh2motion-desktop.git#commit=d10017f35c3441af7a5f4f0db319b57cc67d4f89
+	source = frontend::git+https://github.com/Mesh2Motion/mesh2motion-app.git#commit=d682157bfa09785089f6a2941043f3fd969e3e8e
 	source = mesh2motion.desktop
 	source = mesh2motion-launcher
 	source = MCP-CLIENT.md
