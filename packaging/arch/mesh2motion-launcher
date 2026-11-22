@@ -1,0 +1,3 @@
+#!/usr/bin/bash
+set -euo pipefail
+exec /usr/lib/mesh2motion/mesh2motion "$@"
