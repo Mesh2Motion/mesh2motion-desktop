@@ -505,6 +505,29 @@ fn mcp_publish_snapshot(snapshot: Value, state: State<'_, McpHostState>) -> Resu
     }
 }
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            app.manage(McpHostState::new());
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            mcp_publish_snapshot,
+            mcp_host_status,
+            mcp_host_enable,
+            mcp_host_disable,
+            mcp_connection_test,
+            mcp_set_enabled,
+            mcp_test_connection,
+            mcp_host_paths
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+
 #[cfg(test)]
 mod contract_tests {
     use super::McpHostStatus;
@@ -534,27 +557,4 @@ mod contract_tests {
         assert_eq!(status["supported"], false);
         assert_eq!(status["client_count"], serde_json::Value::Null);
     }
-}
-
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
-            app.manage(McpHostState::new());
-            Ok(())
-        })
-        .invoke_handler(tauri::generate_handler![
-            greet,
-            mcp_publish_snapshot,
-            mcp_host_status,
-            mcp_host_enable,
-            mcp_host_disable,
-            mcp_connection_test,
-            mcp_set_enabled,
-            mcp_test_connection,
-            mcp_host_paths
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
 }
