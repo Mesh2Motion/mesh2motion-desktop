@@ -14,10 +14,14 @@ fn greet(name: &str) -> String {
 /// Runtime-visible host truth. This contains counters and snapshot metadata
 /// only; it never returns a model path or snapshot payload.
 #[derive(Clone, Debug, Default, Serialize)]
-#[serde(rename_all = "camelCase")]
 struct McpHostStatus {
     supported: bool,
     enabled: bool,
+    endpoint: Option<String>,
+    client_count: Option<u64>,
+    commands: Vec<String>,
+    sidecar_path: Option<String>,
+    tools: Vec<String>,
     socket_available: bool,
     snapshot_available: bool,
     publish_attempts: u64,
@@ -30,7 +34,6 @@ struct McpHostStatus {
 }
 
 #[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
 struct McpConnectionTest {
     supported: bool,
     enabled: bool,
@@ -40,6 +43,19 @@ struct McpConnectionTest {
     snapshot_fresh: bool,
     snapshot_age_ms: Option<u64>,
     error_code: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct McpTestConnection {
+    ok: bool,
+    message: String,
+    latency_ms: Option<u64>,
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+struct McpHostPaths {
+    sidecar_path: Option<String>,
+    socket_path: Option<String>,
 }
 
 #[cfg(feature = "mcp-host")]
@@ -87,9 +103,31 @@ impl McpHostState {
             .as_ref()
             .and_then(|state| state.as_ref())
             .is_some_and(mesh2motion_mcp::McpHost::socket_available);
+        let endpoint = host
+            .as_ref()
+            .and_then(|state| state.as_ref())
+            .map(|host| host.endpoint().to_string_lossy().into_owned());
         McpHostStatus {
             supported: true,
             enabled,
+            endpoint,
+            client_count: None,
+            commands: vec![
+                "mcp_host_enable".to_owned(),
+                "mcp_host_disable".to_owned(),
+                "mcp_connection_test".to_owned(),
+                "mcp_set_enabled".to_owned(),
+                "mcp_test_connection".to_owned(),
+                "mcp_host_paths".to_owned(),
+            ],
+            sidecar_path: configured_sidecar_path(),
+            tools: vec![
+                "application_get_status".to_owned(),
+                "renderer_get_state".to_owned(),
+                "rigs_list".to_owned(),
+                "animations_list".to_owned(),
+                "scene_inspect".to_owned(),
+            ],
             socket_available,
             snapshot_available: diagnostics.snapshot_available,
             publish_attempts: diagnostics.publish_attempts,
@@ -176,6 +214,14 @@ fn host_error_code(error: &mesh2motion_mcp::HostError) -> &'static str {
     }
 }
 
+#[cfg(feature = "mcp-host")]
+fn configured_sidecar_path() -> Option<String> {
+    std::env::var_os("M2M_MCP_SIDECAR_PATH")
+        .map(std::path::PathBuf::from)
+        .filter(|path| path.is_absolute())
+        .map(|path| path.to_string_lossy().into_owned())
+}
+
 #[cfg(not(feature = "mcp-host"))]
 impl McpHostState {
     fn new() -> Self {
@@ -216,6 +262,41 @@ fn mcp_host_disable(state: State<'_, McpHostState>) -> Result<McpHostStatus, Str
     {
         state.disable()?;
         Ok(state.status())
+    }
+    #[cfg(not(feature = "mcp-host"))]
+    {
+        let _ = state;
+        Err("MCP_UNSUPPORTED_FEATURE".to_owned())
+    }
+}
+
+/// UI adapter contract: the frontend supplies only a boolean and receives no
+/// endpoint or snapshot data as part of the mutation result.
+#[tauri::command]
+fn mcp_set_enabled(enabled: bool, state: State<'_, McpHostState>) -> Result<(), String> {
+    #[cfg(feature = "mcp-host")]
+    {
+        if enabled {
+            state.enable()
+        } else {
+            state.disable()
+        }
+    }
+    #[cfg(not(feature = "mcp-host"))]
+    {
+        let _ = (enabled, state);
+        Err("MCP_UNSUPPORTED_FEATURE".to_owned())
+    }
+}
+
+#[tauri::command]
+fn mcp_host_paths(state: State<'_, McpHostState>) -> Result<McpHostPaths, String> {
+    #[cfg(feature = "mcp-host")]
+    {
+        Ok(McpHostPaths {
+            sidecar_path: configured_sidecar_path(),
+            socket_path: state.endpoint()?,
+        })
     }
     #[cfg(not(feature = "mcp-host"))]
     {
@@ -341,6 +422,35 @@ async fn mcp_connection_test(state: State<'_, McpHostState>) -> Result<McpConnec
 }
 
 #[tauri::command]
+async fn mcp_test_connection(state: State<'_, McpHostState>) -> Result<McpTestConnection, String> {
+    #[cfg(feature = "mcp-host")]
+    {
+        let started = std::time::Instant::now();
+        let result = mcp_connection_test(state).await?;
+        let ok = result.connected && result.snapshot_fresh;
+        let message = match result.error_code.as_deref() {
+            Some(code) => code.to_owned(),
+            None if ok => "Connected; snapshot is fresh".to_owned(),
+            None => "Connected; snapshot is unavailable".to_owned(),
+        };
+        Ok(McpTestConnection {
+            ok,
+            message,
+            latency_ms: Some(started.elapsed().as_millis().min(u64::MAX as u128) as u64),
+        })
+    }
+    #[cfg(not(feature = "mcp-host"))]
+    {
+        let _ = state;
+        Ok(McpTestConnection {
+            ok: false,
+            message: "MCP_UNSUPPORTED_FEATURE".to_owned(),
+            latency_ms: None,
+        })
+    }
+}
+
+#[tauri::command]
 fn mcp_publish_snapshot(snapshot: Value, state: State<'_, McpHostState>) -> Result<(), String> {
     #[cfg(feature = "mcp-host")]
     {
@@ -395,6 +505,37 @@ fn mcp_publish_snapshot(snapshot: Value, state: State<'_, McpHostState>) -> Resu
     }
 }
 
+#[cfg(test)]
+mod contract_tests {
+    use super::McpHostStatus;
+
+    #[test]
+    fn mcp_status_matches_frontend_snake_case_contract() {
+        let status = serde_json::to_value(McpHostStatus::default()).unwrap();
+        for field in [
+            "supported",
+            "enabled",
+            "endpoint",
+            "client_count",
+            "commands",
+            "sidecar_path",
+            "tools",
+            "socket_available",
+            "publish_attempts",
+            "publish_accepted",
+            "publish_rejected",
+            "last_accepted_sequence",
+            "last_accepted_at",
+            "snapshot_age_ms",
+            "last_rejection_code",
+        ] {
+            assert!(status.get(field).is_some(), "missing status field {field}");
+        }
+        assert_eq!(status["supported"], false);
+        assert_eq!(status["client_count"], serde_json::Value::Null);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -409,7 +550,10 @@ pub fn run() {
             mcp_host_status,
             mcp_host_enable,
             mcp_host_disable,
-            mcp_connection_test
+            mcp_connection_test,
+            mcp_set_enabled,
+            mcp_test_connection,
+            mcp_host_paths
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
