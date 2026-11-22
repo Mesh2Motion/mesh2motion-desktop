@@ -1,4 +1,14 @@
-use std::{env, future::Future, io, pin::Pin, time::Duration};
+use std::{
+    env,
+    future::Future,
+    io,
+    pin::Pin,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
 
 use serde::{Deserialize, Serialize};
 use tokio::{
@@ -39,17 +49,43 @@ pub struct IpcResponse {
     pub error: Option<IpcErrorCode>,
 }
 
+impl IpcResponse {
+    pub fn snapshot(request_id: u64, snapshot: ControlSnapshot) -> Self {
+        Self {
+            protocol_version: IPC_PROTOCOL_VERSION,
+            request_id,
+            snapshot: Some(snapshot),
+            error: None,
+        }
+    }
+
+    pub fn error(request_id: u64, error: IpcErrorCode) -> Self {
+        Self {
+            protocol_version: IPC_PROTOCOL_VERSION,
+            request_id,
+            snapshot: None,
+            error: Some(error),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum IpcErrorCode {
     AppUnavailable,
     NotReady,
+    AppDisconnected,
+    IncompatibleVersion,
+    PermissionDenied,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum IpcError {
     Unavailable,
     NotReady,
+    Disconnected,
+    IncompatibleVersion,
+    PermissionDenied,
     InvalidResponse,
 }
 
@@ -66,6 +102,7 @@ pub trait AppSnapshotSource: Send + Sync {
 #[derive(Clone, Debug, Default)]
 pub struct IpcClient {
     endpoint: Option<String>,
+    connected_once: Arc<AtomicBool>,
 }
 
 impl IpcClient {
@@ -74,18 +111,27 @@ impl IpcClient {
             endpoint: env::var(IPC_ENDPOINT_ENV)
                 .ok()
                 .filter(|value| !value.is_empty()),
+            connected_once: Arc::default(),
         }
     }
 
     pub fn with_endpoint(endpoint: impl Into<String>) -> Self {
         Self {
             endpoint: Some(endpoint.into()),
+            connected_once: Arc::default(),
         }
     }
 
     async fn request_snapshot(&self) -> Result<ControlSnapshot, IpcError> {
         let endpoint = self.endpoint.as_deref().ok_or(IpcError::Unavailable)?;
-        let mut stream = connect_stream(endpoint).await?;
+        let mut stream = connect_stream(endpoint).await.map_err(|_| {
+            if self.connected_once.load(Ordering::Acquire) {
+                IpcError::Disconnected
+            } else {
+                IpcError::Unavailable
+            }
+        })?;
+        self.connected_once.store(true, Ordering::Release);
 
         let request = IpcRequest {
             protocol_version: IPC_PROTOCOL_VERSION,
@@ -98,7 +144,7 @@ impl IpcClient {
         let response: IpcResponse =
             serde_json::from_slice(&response_bytes).map_err(|_| IpcError::InvalidResponse)?;
         if response.protocol_version != IPC_PROTOCOL_VERSION || response.request_id != 1 {
-            return Err(IpcError::InvalidResponse);
+            return Err(IpcError::IncompatibleVersion);
         }
         match (response.snapshot, response.error) {
             (Some(mut snapshot), None) if snapshot.validate().is_ok() => {
@@ -108,6 +154,9 @@ impl IpcClient {
             (Some(_), None) => Err(IpcError::InvalidResponse),
             (None, Some(IpcErrorCode::AppUnavailable)) => Err(IpcError::Unavailable),
             (None, Some(IpcErrorCode::NotReady)) => Err(IpcError::NotReady),
+            (None, Some(IpcErrorCode::AppDisconnected)) => Err(IpcError::Disconnected),
+            (None, Some(IpcErrorCode::IncompatibleVersion)) => Err(IpcError::IncompatibleVersion),
+            (None, Some(IpcErrorCode::PermissionDenied)) => Err(IpcError::PermissionDenied),
             _ => Err(IpcError::InvalidResponse),
         }
     }
@@ -176,8 +225,8 @@ async fn write_frame<W: AsyncWriteExt + Unpin>(
         writer.flush().await
     })
     .await
-    .map_err(|_| IpcError::Unavailable)?
-    .map_err(|_| IpcError::Unavailable)
+    .map_err(|_| IpcError::Disconnected)?
+    .map_err(|_| IpcError::Disconnected)
 }
 
 async fn read_frame<R: AsyncReadExt + Unpin>(reader: &mut R) -> Result<Vec<u8>, IpcError> {
@@ -196,8 +245,14 @@ async fn read_frame<R: AsyncReadExt + Unpin>(reader: &mut R) -> Result<Vec<u8>, 
         Ok(payload)
     })
     .await
-    .map_err(|_| IpcError::Unavailable)?
-    .map_err(|_| IpcError::InvalidResponse)
+    .map_err(|_| IpcError::Disconnected)?
+    .map_err(|error| {
+        if error.kind() == io::ErrorKind::InvalidData {
+            IpcError::InvalidResponse
+        } else {
+            IpcError::Disconnected
+        }
+    })
 }
 
 #[cfg(test)]
@@ -259,9 +314,16 @@ mod tests {
 
         let endpoint = socket_path.to_string_lossy().into_owned();
         let result = IpcClient::with_endpoint(endpoint).snapshot().await;
-        assert_eq!(result.unwrap_err(), IpcError::Unavailable);
+        assert_eq!(result.unwrap_err(), IpcError::Disconnected);
         server_task.abort();
         let _ = std::fs::remove_file(socket_path);
+    }
+
+    #[tokio::test]
+    async fn missing_app_after_a_prior_connection_is_disconnected() {
+        let client = IpcClient::with_endpoint("/tmp/m2m009-no-such-socket.sock");
+        client.connected_once.store(true, Ordering::Release);
+        assert_eq!(client.snapshot().await.unwrap_err(), IpcError::Disconnected);
     }
 
     #[cfg(unix)]

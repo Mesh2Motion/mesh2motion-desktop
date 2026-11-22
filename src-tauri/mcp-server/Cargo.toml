@@ -4,12 +4,23 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
+[features]
+default = ["mcp-server"]
+mcp-server = ["dep:rmcp"]
+ipc-host = []
+
 [dependencies]
-rmcp = { version = "=3.11.0", default-features = false, features = ["server", "macros", "schemars", "transport-io"] }
+rmcp = { version = "=3.11.0", default-features = false, features = ["server", "macros", "schemars", "transport-io"], optional = true }
 schemars = "=1.2.3"
 serde = { version = "=1.0.228", features = ["derive"] }
 serde_json = "=1.0.150"
-tokio = { version = "=1.52.3", features = ["io-util", "macros", "net", "rt-multi-thread", "time"] }
+tokio = { version = "=1.52.3", features = ["io-util", "macros", "net", "rt-multi-thread", "sync", "time"] }
+chrono = { version = "=0.4.44", default-features = false, features = ["std", "clock"] }
+
+[[bin]]
+name = "mesh2motion-mcp"
+path = "src/main.rs"
+required-features = ["mcp-server"]
 
 [lints.rust]
 unsafe_code = "forbid"

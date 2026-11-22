@@ -387,6 +387,24 @@ fn error_envelope<T>(error: IpcError) -> ToolEnvelope<T> {
             true,
             None,
         ),
+        IpcError::Disconnected => ToolEnvelope::failure(
+            "APP_DISCONNECTED",
+            "Mesh2Motion disconnected during the local control request.",
+            true,
+            None,
+        ),
+        IpcError::IncompatibleVersion => ToolEnvelope::failure(
+            "INCOMPATIBLE_VERSION",
+            "The application and MCP sidecar use incompatible control protocol versions.",
+            false,
+            None,
+        ),
+        IpcError::PermissionDenied => ToolEnvelope::failure(
+            "PERMISSION_DENIED",
+            "The local control peer did not pass same-user verification.",
+            false,
+            None,
+        ),
         IpcError::InvalidResponse => ToolEnvelope::ipc_error(),
     }
 }

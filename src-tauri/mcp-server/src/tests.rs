@@ -25,11 +25,7 @@ pub(crate) fn mock_snapshot() -> ControlSnapshot {
         meta: SnapshotMeta {
             schema_version: "1.0".to_owned(),
             sequence: 9,
-            captured_at: "2026-11-22T12:00:00Z".to_owned(),
-            captured_at_unix_ms: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64,
+            captured_at: chrono::Utc::now().to_rfc3339(),
             age_ms: 42,
         },
         application: ApplicationInfo {
@@ -39,6 +35,7 @@ pub(crate) fn mock_snapshot() -> ControlSnapshot {
             build: "test-fixture".to_owned(),
             uptime_ms: 5_000,
             diagnostics_enabled: false,
+            last_error: None,
         },
         renderer: RendererInfo {
             created: true,
@@ -53,6 +50,7 @@ pub(crate) fn mock_snapshot() -> ControlSnapshot {
                 height: 480,
             },
             gl: None,
+            last_error: None,
         },
         rigs: vec![RigInfo {
             key: "human".to_owned(),
@@ -105,6 +103,7 @@ pub(crate) fn mock_snapshot() -> ControlSnapshot {
                 loaded: true,
                 skeleton_type: "human".to_owned(),
                 bone_count: 3,
+                truncated: None,
                 bone_names: vec!["root".to_owned(), "hip".to_owned(), "knee".to_owned()],
                 root_name: Some("root".to_owned()),
             },
