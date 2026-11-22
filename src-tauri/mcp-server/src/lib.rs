@@ -24,7 +24,7 @@ pub use model::*;
 #[cfg(feature = "mcp-server")]
 pub use server::Mesh2MotionMcp;
 #[cfg(feature = "ipc-host")]
-pub use store::{SnapshotStore, StoreError, StoreStatus};
+pub use store::{SnapshotStore, StoreDiagnostics, StoreError, StoreStatus};
 
 #[cfg(all(test, feature = "mcp-server"))]
 mod tests;

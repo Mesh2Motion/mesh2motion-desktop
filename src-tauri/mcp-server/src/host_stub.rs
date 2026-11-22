@@ -12,4 +12,8 @@ impl McpHost {
     pub fn endpoint(&self) -> &std::path::Path {
         std::path::Path::new("")
     }
+
+    pub fn socket_available(&self) -> bool {
+        false
+    }
 }

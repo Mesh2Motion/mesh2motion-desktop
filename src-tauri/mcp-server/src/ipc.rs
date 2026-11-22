@@ -82,6 +82,7 @@ pub enum IpcErrorCode {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum IpcError {
     Unavailable,
+    AppUnavailable,
     NotReady,
     Disconnected,
     IncompatibleVersion,
@@ -152,7 +153,7 @@ impl IpcClient {
                 Ok(snapshot)
             }
             (Some(_), None) => Err(IpcError::InvalidResponse),
-            (None, Some(IpcErrorCode::AppUnavailable)) => Err(IpcError::Unavailable),
+            (None, Some(IpcErrorCode::AppUnavailable)) => Err(IpcError::AppUnavailable),
             (None, Some(IpcErrorCode::NotReady)) => Err(IpcError::NotReady),
             (None, Some(IpcErrorCode::AppDisconnected)) => Err(IpcError::Disconnected),
             (None, Some(IpcErrorCode::IncompatibleVersion)) => Err(IpcError::IncompatibleVersion),

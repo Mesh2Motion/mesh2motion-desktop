@@ -20,10 +20,28 @@ pub enum StoreError {
     Unavailable,
 }
 
+/// Bounded diagnostics for the most recent publisher lifecycle. Contains no
+/// snapshot payload, asset name, or private path.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct StoreDiagnostics {
+    pub publish_attempts: u64,
+    pub publish_accepted: u64,
+    pub publish_rejected: u64,
+    pub last_rejection: Option<StoreError>,
+    pub snapshot_available: bool,
+    pub last_accepted_sequence: Option<u64>,
+    pub last_accepted_at: Option<String>,
+    pub snapshot_age_ms: Option<u64>,
+}
+
 #[derive(Default)]
 struct State {
     snapshot: Option<ControlSnapshot>,
     incompatible: bool,
+    publish_attempts: u64,
+    publish_accepted: u64,
+    publish_rejected: u64,
+    last_rejection: Option<StoreError>,
 }
 
 #[derive(Clone, Default)]
@@ -31,12 +49,33 @@ pub struct SnapshotStore(Arc<RwLock<State>>);
 
 impl SnapshotStore {
     pub fn publish_json(&self, value: serde_json::Value) -> Result<(), StoreError> {
+        if let Ok(mut state) = self.0.write() {
+            state.publish_attempts = state.publish_attempts.saturating_add(1);
+        }
+        let result = self.publish_json_inner(value);
+        if let Ok(mut state) = self.0.write() {
+            match result {
+                Ok(()) => {
+                    state.publish_accepted = state.publish_accepted.saturating_add(1);
+                    state.last_rejection = None;
+                }
+                Err(error) => {
+                    state.publish_rejected = state.publish_rejected.saturating_add(1);
+                    state.last_rejection = Some(error);
+                }
+            }
+        }
+        result
+    }
+
+    fn publish_json_inner(&self, value: serde_json::Value) -> Result<(), StoreError> {
         let size = serde_json::to_vec(&value)
             .map_err(|_| StoreError::InvalidSnapshot)?
             .len();
         if size > MAX_SNAPSHOT_BYTES {
             return Err(StoreError::TooLarge);
         }
+        log_fractional_number_paths(&value, "", &mut 0);
         let schema = value
             .get("meta")
             .and_then(|m| m.get("schema_version").or_else(|| m.get("schemaVersion")));
@@ -50,9 +89,16 @@ impl SnapshotStore {
             }
             None => return Err(StoreError::InvalidSnapshot),
         }
-        let mut snapshot: ControlSnapshot =
-            serde_json::from_value(value).map_err(|_| StoreError::InvalidSnapshot)?;
+        let mut snapshot: ControlSnapshot = serde_json::from_value(value).map_err(|error| {
+            eprintln!(
+                "M2M_SNAPSHOT_VALIDATION stage=deserialize category={:?} detail={}",
+                error.classify(),
+                error
+            );
+            StoreError::InvalidSnapshot
+        })?;
         snapshot.validate().map_err(|e| {
+            eprintln!("M2M_SNAPSHOT_VALIDATION stage=contract reason={e}");
             if e.contains("incompatible") {
                 StoreError::IncompatibleVersion
             } else {
@@ -71,6 +117,29 @@ impl SnapshotStore {
         state.incompatible = false;
         state.snapshot = Some(snapshot);
         Ok(())
+    }
+
+    pub fn diagnostics(&self) -> StoreDiagnostics {
+        let Ok(state) = self.0.read() else {
+            return StoreDiagnostics {
+                last_rejection: Some(StoreError::Unavailable),
+                ..StoreDiagnostics::default()
+            };
+        };
+        let mut snapshot = state.snapshot.clone();
+        if let Some(snapshot) = snapshot.as_mut() {
+            snapshot.refresh_age();
+        }
+        StoreDiagnostics {
+            publish_attempts: state.publish_attempts,
+            publish_accepted: state.publish_accepted,
+            publish_rejected: state.publish_rejected,
+            last_rejection: state.last_rejection,
+            snapshot_available: snapshot.is_some(),
+            last_accepted_sequence: snapshot.as_ref().map(|s| s.meta.sequence),
+            last_accepted_at: snapshot.as_ref().map(|s| s.meta.captured_at.clone()),
+            snapshot_age_ms: snapshot.map(|s| s.meta.age_ms),
+        }
     }
 
     pub fn status(&self) -> StoreStatus {
@@ -99,6 +168,73 @@ impl SnapshotStore {
             panic!("intentional poison test");
         })
         .join();
+    }
+}
+
+fn log_fractional_number_paths(value: &serde_json::Value, path: &str, count: &mut usize) {
+    if *count >= 64 {
+        return;
+    }
+    match value {
+        serde_json::Value::Object(fields) => {
+            for (key, child) in fields {
+                let next = if path.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{path}.{key}")
+                };
+                log_fractional_number_paths(child, &next, count);
+                if *count >= 64 {
+                    break;
+                }
+            }
+        }
+        serde_json::Value::Array(values) => {
+            for (index, child) in values.iter().enumerate() {
+                log_fractional_number_paths(child, &format!("{path}[{index}]"), count);
+                if *count >= 64 {
+                    break;
+                }
+            }
+        }
+        serde_json::Value::Number(number) => {
+            const INTEGER_KEYS: &[&str] = &[
+                "sequence",
+                "age_ms",
+                "ageMs",
+                "uptime_ms",
+                "uptimeMs",
+                "width",
+                "height",
+                "consecutive_failures",
+                "consecutiveFailures",
+                "index",
+                "track_count",
+                "trackCount",
+                "mesh_count",
+                "meshCount",
+                "vertex_count",
+                "vertexCount",
+                "triangle_count",
+                "triangleCount",
+                "bone_count",
+                "boneCount",
+                "loaded_count",
+                "loadedCount",
+                "active_index",
+                "activeIndex",
+                "object_count",
+                "objectCount",
+            ];
+            let key = path.rsplit(['.', '[']).next().unwrap_or(path);
+            if INTEGER_KEYS.contains(&key)
+                && number.as_f64().is_some_and(|value| value.fract() != 0.0)
+            {
+                eprintln!("M2M_SNAPSHOT_NUMBER path={path} fractional=true");
+                *count += 1;
+            }
+        }
+        _ => {}
     }
 }
 
@@ -247,5 +383,25 @@ mod tests {
             worker.join().unwrap();
         }
         assert_eq!(store.snapshot().unwrap().meta.sequence, 12);
+    }
+
+    #[test]
+    fn diagnostics_distinguish_attempts_accepted_and_rejected_state() {
+        let store = SnapshotStore::default();
+        assert_eq!(store.publish_json(json(1)), Ok(()));
+        assert_eq!(
+            store.publish_json(json(1)),
+            Err(StoreError::NonMonotonicSequence)
+        );
+        let diagnostics = store.diagnostics();
+        assert_eq!(diagnostics.publish_attempts, 2);
+        assert_eq!(diagnostics.publish_accepted, 1);
+        assert_eq!(diagnostics.publish_rejected, 1);
+        assert_eq!(
+            diagnostics.last_rejection,
+            Some(StoreError::NonMonotonicSequence)
+        );
+        assert_eq!(diagnostics.last_accepted_sequence, Some(1));
+        assert!(diagnostics.snapshot_age_ms.is_some());
     }
 }

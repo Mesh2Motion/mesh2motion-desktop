@@ -40,6 +40,7 @@ pub struct McpHost {
     stop: Arc<AtomicBool>,
     thread: Option<JoinHandle<()>>,
     endpoint: PathBuf,
+    owner_uid: u32,
 }
 
 impl McpHost {
@@ -123,11 +124,23 @@ impl McpHost {
             stop,
             thread: Some(thread),
             endpoint,
+            owner_uid: expected_uid,
         })
     }
 
     pub fn endpoint(&self) -> &std::path::Path {
         &self.endpoint
+    }
+
+    /// True only while the expected user-owned socket path is present with
+    /// private permissions. This is a filesystem check, not a client-auth claim.
+    pub fn socket_available(&self) -> bool {
+        let Ok(metadata) = fs::symlink_metadata(&self.endpoint) else {
+            return false;
+        };
+        metadata.file_type().is_socket()
+            && metadata.uid() == self.owner_uid
+            && metadata.permissions().mode() & 0o777 == 0o600
     }
 }
 
@@ -217,6 +230,33 @@ async fn serve_client(
         },
         Err(_) => return Ok(()),
     };
+    let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+    let (outcome, sequence, age_ms) = match (&response.snapshot, &response.error) {
+        (Some(snapshot), None) => (
+            "snapshot_served",
+            Some(snapshot.meta.sequence),
+            Some(snapshot.meta.age_ms),
+        ),
+        (None, Some(error)) => (
+            match error {
+                IpcErrorCode::AppUnavailable => "app_unavailable",
+                IpcErrorCode::NotReady => "app_not_ready",
+                IpcErrorCode::AppDisconnected => "app_disconnected",
+                IpcErrorCode::IncompatibleVersion => "incompatible_version",
+                IpcErrorCode::PermissionDenied => "permission_denied",
+            },
+            None,
+            None,
+        ),
+        _ => ("invalid_response", None, None),
+    };
+    eprintln!(
+        "M2M_IPC timestamp={timestamp} request_id={} peer={} outcome={outcome} sequence={} age_ms={}",
+        response.request_id,
+        if peer_uid_allowed(expected_uid, peer_uid) { "verified_same_uid" } else { "denied" },
+        sequence.map_or_else(|| "none".to_owned(), |value| value.to_string()),
+        age_ms.map_or_else(|| "none".to_owned(), |value| value.to_string())
+    );
     let payload = serde_json::to_vec(&response)?;
     if payload.len() > MAX_SNAPSHOT_BYTES {
         return Ok(());
@@ -279,12 +319,28 @@ mod tests {
         let path = private_runtime();
         let host = McpHost::start_at(path.clone(), SnapshotStore::default()).unwrap();
         let socket = host.endpoint().to_path_buf();
+        assert!(host.socket_available());
         assert_eq!(
             fs::metadata(&socket).unwrap().permissions().mode() & 0o777,
             0o600
         );
         drop(host);
         assert!(!socket.exists());
+        let _ = fs::remove_dir_all(path);
+    }
+
+    #[tokio::test]
+    async fn client_distinguishes_a_connected_host_with_no_snapshot() {
+        use crate::ipc::AppSnapshotSource;
+
+        let path = private_runtime();
+        let host = McpHost::start_at(path.clone(), SnapshotStore::default()).unwrap();
+        let client = crate::IpcClient::with_endpoint(host.endpoint().to_string_lossy());
+        assert_eq!(
+            client.snapshot().await.unwrap_err(),
+            crate::IpcError::AppUnavailable
+        );
+        drop(host);
         let _ = fs::remove_dir_all(path);
     }
 

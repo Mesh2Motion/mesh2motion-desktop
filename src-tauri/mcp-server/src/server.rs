@@ -22,8 +22,19 @@ impl Mesh2MotionMcp {
         Self { source }
     }
 
-    async fn read_snapshot(&self) -> Result<ControlSnapshot, IpcError> {
-        self.source.snapshot().await
+    async fn read_snapshot(&self, tool: &'static str) -> Result<ControlSnapshot, IpcError> {
+        let result = self.source.snapshot().await;
+        let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+        match &result {
+            Ok(snapshot) => eprintln!(
+                "M2M_MCP_TOOL timestamp={timestamp} tool={tool} result=snapshot sequence={} age_ms={}",
+                snapshot.meta.sequence, snapshot.meta.age_ms
+            ),
+            Err(error) => eprintln!(
+                "M2M_MCP_TOOL timestamp={timestamp} tool={tool} result=error code={error:?}"
+            ),
+        }
+        result
     }
 }
 
@@ -156,7 +167,7 @@ impl Mesh2MotionMcp {
         Parameters(args): Parameters<ApplicationStatusArgs>,
     ) -> Json<ToolEnvelope<ApplicationStatusData>> {
         let _ = args.include_diagnostics;
-        match self.read_snapshot().await {
+        match self.read_snapshot("application_get_status").await {
             Ok(snapshot) => {
                 let data = ApplicationStatusData {
                     phase: snapshot.application.phase,
@@ -185,7 +196,7 @@ impl Mesh2MotionMcp {
         &self,
         Parameters(_args): Parameters<RendererStateArgs>,
     ) -> Json<ToolEnvelope<RendererInfo>> {
-        match self.read_snapshot().await {
+        match self.read_snapshot("renderer_get_state").await {
             Ok(snapshot) => {
                 if let Some(error) = freshness_error(&snapshot) {
                     return Json(error);
@@ -226,7 +237,7 @@ impl Mesh2MotionMcp {
                 None,
             ));
         }
-        match self.read_snapshot().await {
+        match self.read_snapshot("rigs_list").await {
             Ok(snapshot) => {
                 if let Some(error) = freshness_error(&snapshot) {
                     return Json(error);
@@ -258,7 +269,7 @@ impl Mesh2MotionMcp {
         &self,
         Parameters(args): Parameters<AnimationsListArgs>,
     ) -> Json<ToolEnvelope<ListData<AnimationInfo>>> {
-        match self.read_snapshot().await {
+        match self.read_snapshot("animations_list").await {
             Ok(snapshot) => {
                 if let Some(error) = freshness_error(&snapshot) {
                     return Json(error);
@@ -317,7 +328,7 @@ impl Mesh2MotionMcp {
                 None,
             ));
         }
-        match self.read_snapshot().await {
+        match self.read_snapshot("scene_inspect").await {
             Ok(snapshot) => {
                 if let Some(error) = freshness_error(&snapshot) {
                     return Json(error);
@@ -380,7 +391,7 @@ fn not_ready<T>(snapshot: &ControlSnapshot) -> ToolEnvelope<T> {
 
 fn error_envelope<T>(error: IpcError) -> ToolEnvelope<T> {
     match error {
-        IpcError::Unavailable => ToolEnvelope::app_unavailable(),
+        IpcError::Unavailable | IpcError::AppUnavailable => ToolEnvelope::app_unavailable(),
         IpcError::NotReady => ToolEnvelope::failure(
             "NOT_READY",
             "The application has not published a ready control snapshot.",
