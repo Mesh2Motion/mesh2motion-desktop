@@ -33,6 +33,7 @@ pub enum AppPage {
     Create,
     Retarget,
     PreviewGenerator,
+    Remix,
     Unknown,
 }
 

@@ -127,6 +127,13 @@ fn server_with_snapshot(snapshot: ControlSnapshot) -> Mesh2MotionMcp {
     Mesh2MotionMcp::new(Arc::new(MockSnapshotSource(snapshot)))
 }
 
+#[test]
+fn v1_accepts_remix_page_value() {
+    let mut snapshot = mock_snapshot();
+    snapshot.application.page = crate::AppPage::Remix;
+    assert_eq!(snapshot.validate(), Ok(()));
+}
+
 #[tokio::test]
 async fn status_and_renderer_return_only_mock_protocol_state() {
     let app = server();
