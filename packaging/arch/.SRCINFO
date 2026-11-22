@@ -22,7 +22,7 @@ pkgbase = mesh2motion-git
 	sha256sums = SKIP
 	sha256sums = SKIP
 	sha256sums = e125a2736b0fef332bdc7e86ecee10f64d82d10071a65fe593a3bfe1885033be
-	sha256sums = 18c6ced09ee4b22a18e5cc037ddb48d92e1e7801ef69b0640c9e975cbfab533c
+	sha256sums = 9e0ac374a936bd27e912ab53f58acf17ed34c03131abd4fd5c8511e1a439e06f
 	sha256sums = cdb69dba7fbf6761966c8c07fff33ba431173e310fdfa806a9471b9ab5c3e47c
 
 pkgname = mesh2motion-git
