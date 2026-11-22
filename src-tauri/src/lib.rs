@@ -152,19 +152,20 @@ impl McpHostState {
         }
     }
 
-    fn status(&self) -> McpHostStatus {
+    fn status(&self) -> Result<McpHostStatus, String> {
         let diagnostics = self.store.diagnostics();
-        let host = self.host.lock().ok();
-        let enabled = host.as_ref().is_some_and(|state| state.is_some());
+        let host = self
+            .host
+            .lock()
+            .map_err(|_| "MCP_HOST_STATE_LOCKED".to_owned())?;
+        let enabled = host.is_some();
         let socket_available = host
             .as_ref()
-            .and_then(|state| state.as_ref())
             .is_some_and(mesh2motion_mcp::McpHost::socket_available);
         let endpoint = host
             .as_ref()
-            .and_then(|state| state.as_ref())
             .map(|host| host.endpoint().to_string_lossy().into_owned());
-        McpHostStatus {
+        Ok(McpHostStatus {
             supported: true,
             enabled,
             endpoint,
@@ -197,7 +198,7 @@ impl McpHostState {
                 .last_rejection
                 .map(store_error_code)
                 .map(str::to_owned),
-        }
+        })
     }
 
     fn enable(&self) -> Result<(), String> {
@@ -287,7 +288,7 @@ impl McpHostState {
 }
 
 #[tauri::command]
-fn mcp_host_status(state: State<'_, McpHostState>) -> McpHostStatus {
+fn mcp_host_status(state: State<'_, McpHostState>) -> Result<McpHostStatus, String> {
     #[cfg(feature = "mcp-host")]
     {
         state.status()
@@ -295,7 +296,7 @@ fn mcp_host_status(state: State<'_, McpHostState>) -> McpHostStatus {
     #[cfg(not(feature = "mcp-host"))]
     {
         let _ = state;
-        McpHostStatus::default()
+        Ok(McpHostStatus::default())
     }
 }
 
@@ -304,7 +305,7 @@ fn mcp_host_enable(state: State<'_, McpHostState>) -> Result<McpHostStatus, Stri
     #[cfg(feature = "mcp-host")]
     {
         state.enable()?;
-        Ok(state.status())
+        state.status()
     }
     #[cfg(not(feature = "mcp-host"))]
     {
@@ -318,7 +319,7 @@ fn mcp_host_disable(state: State<'_, McpHostState>) -> Result<McpHostStatus, Str
     #[cfg(feature = "mcp-host")]
     {
         state.disable()?;
-        Ok(state.status())
+        state.status()
     }
     #[cfg(not(feature = "mcp-host"))]
     {
@@ -516,7 +517,6 @@ fn mcp_publish_snapshot(snapshot: Value, state: State<'_, McpHostState>) -> Resu
             .lock()
             .map_err(|_| "MCP_HOST_STATE_LOCKED".to_owned())?;
         if guard.is_none() {
-            eprintln!("M2M_PUBLISH result=rejected code=MCP_HOST_DISABLED");
             return Err("MCP_HOST_DISABLED".to_owned());
         }
         let sequence = snapshot.pointer("/meta/sequence").and_then(Value::as_u64);
@@ -589,6 +589,25 @@ pub fn run() {
 #[cfg(test)]
 mod contract_tests {
     use super::{preview_asset_relative_path, McpHostStatus};
+
+    #[cfg(feature = "mcp-host")]
+    #[test]
+    fn poisoned_host_status_returns_an_error() {
+        let state = super::McpHostState {
+            store: mesh2motion_mcp::SnapshotStore::default(),
+            host: std::sync::Mutex::new(None),
+        };
+        let poison = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = state.host.lock().unwrap();
+            panic!("poison host state for test");
+        }));
+
+        assert!(poison.is_err());
+        assert!(matches!(
+            state.status(),
+            Err(error) if error == "MCP_HOST_STATE_LOCKED"
+        ));
+    }
 
     #[test]
     fn preview_asset_keys_are_narrow_and_relative() {
