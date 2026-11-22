@@ -1,8 +1,9 @@
 # Mesh2Motion MCP sidecar
 
-This is a standalone, optional Rust MCP server. It is not linked into or
-automatically started by the Tauri application. An MCP host must explicitly
-launch `mesh2motion-mcp` as a stdio server.
+This optional Rust MCP sidecar exposes five read-only tools over stdio. An MCP
+client launches `mesh2motion-mcp`; it is not started by the Tauri application.
+The Tauri app separately enables its private snapshot host only after explicit
+user opt-in.
 
 Build/test from this directory with Cargo. MCP frames use stdin/stdout; do not
 write diagnostics to stdout.
@@ -28,17 +29,26 @@ age from the numeric timestamp on receipt and does not trust app-provided age.
 Tool error text never
 includes an endpoint, path, raw exception, or IPC payload.
 
-The Tauri snapshot publisher/listener is intentionally not implemented in this
-foundation. Without it, or when the endpoint cannot be reached, every
-application-dependent tool returns `APP_UNAVAILABLE`; the sidecar never
-substitutes test data. Mock snapshots exist only in `#[cfg(test)]` tests.
+The Tauri application publishes validated snapshots through a private local
+IPC endpoint. If the app is unavailable, disabled, or has not published a
+snapshot, application-dependent tools return `APP_UNAVAILABLE`; the sidecar
+never substitutes test data. Mock snapshots exist only in `#[cfg(test)]`
+tests.
 
-The future Tauri host must create the socket only after an explicit opt-in,
-place Unix sockets in a private per-user runtime directory with restrictive
-permissions, use a same-user ACL on Windows named pipes, validate and cap the
-snapshot before publishing it, and unlink/close the endpoint on app shutdown.
-Both peers must close the connection after the single response. Stdio remains
-the only MCP transport.
+On Linux the host uses a private per-user runtime directory, a `0700`
+directory, a `0600` Unix socket and same-UID peer verification. On Windows the
+host uses the platform named pipe implementation. The app removes the socket
+when the host is disabled or the app exits. Both IPC peers close each
+one-request connection. Stdio remains the only MCP transport; there is no TCP
+listener.
+
+To opt into sidecar-started application launch, set
+`M2M_MCP_AUTOSTART_APP=1` in the local MCP client configuration. The sidecar
+then runs the configured Mesh2Motion executable directly, enables the existing
+read-only host for that app process, and waits up to 25 seconds for a fresh
+snapshot. The default Linux executable is `/usr/lib/mesh2motion/mesh2motion`;
+`M2M_MCP_APP_PATH` is an optional absolute path override for trusted local
+configuration only. No MCP tool accepts an executable path or command.
 
 ## Exposed read-only tools
 
