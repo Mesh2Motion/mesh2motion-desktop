@@ -2,9 +2,66 @@
 use mesh2motion_mcp::AppSnapshotSource;
 use serde::Serialize;
 use serde_json::Value;
+use std::path::PathBuf;
 #[cfg(feature = "mcp-host")]
 use std::sync::Mutex;
-use tauri::{Manager, State};
+use tauri::path::BaseDirectory;
+use tauri::{AppHandle, Manager, State};
+
+fn preview_asset_relative_path(asset_key: &str) -> Result<PathBuf, String> {
+    let mut segments = asset_key.split('/');
+    let folder = segments.next().unwrap_or_default();
+    let filename = segments.next().unwrap_or_default();
+    if segments.next().is_some()
+        || !matches!(
+            folder,
+            "human" | "fox" | "bird" | "dragon" | "kaiju" | "spider" | "snake" | "shark" | "horse"
+        )
+        || !(filename.starts_with("dark_") || filename.starts_with("light_"))
+        || !filename.ends_with(".mp4")
+    {
+        return Err("INVALID_PREVIEW_ASSET".to_owned());
+    }
+
+    let animation = filename
+        .strip_prefix("dark_")
+        .or_else(|| filename.strip_prefix("light_"))
+        .and_then(|name| name.strip_suffix(".mp4"))
+        .unwrap_or_default();
+    if animation.is_empty()
+        || !animation.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, ' ' | '_' | '-')
+        })
+    {
+        return Err("INVALID_PREVIEW_ASSET".to_owned());
+    }
+
+    Ok(PathBuf::from(folder).join(filename))
+}
+
+/// Resolve only bundled preview keys into the read-only asset protocol scope.
+/// The frontend never supplies or receives an arbitrary user filesystem path.
+#[tauri::command]
+fn animation_preview_asset_path(app: AppHandle, asset_key: String) -> Result<String, String> {
+    let relative_path = preview_asset_relative_path(&asset_key)?;
+    let resource_root = app
+        .path()
+        .resolve("animpreviews", BaseDirectory::Resource)
+        .map_err(|_| "PREVIEW_ASSETS_UNAVAILABLE".to_owned())?;
+    let canonical_root = resource_root
+        .canonicalize()
+        .map_err(|_| "PREVIEW_ASSETS_UNAVAILABLE".to_owned())?;
+    let canonical_file = canonical_root
+        .join(relative_path)
+        .canonicalize()
+        .map_err(|_| "PREVIEW_NOT_FOUND".to_owned())?;
+
+    if !canonical_file.starts_with(&canonical_root) || !canonical_file.is_file() {
+        return Err("INVALID_PREVIEW_ASSET".to_owned());
+    }
+
+    Ok(canonical_file.to_string_lossy().into_owned())
+}
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -515,6 +572,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             greet,
+            animation_preview_asset_path,
             mcp_publish_snapshot,
             mcp_host_status,
             mcp_host_enable,
@@ -530,7 +588,29 @@ pub fn run() {
 
 #[cfg(test)]
 mod contract_tests {
-    use super::McpHostStatus;
+    use super::{preview_asset_relative_path, McpHostStatus};
+
+    #[test]
+    fn preview_asset_keys_are_narrow_and_relative() {
+        assert_eq!(
+            preview_asset_relative_path("human/dark_Angry.mp4").unwrap(),
+            std::path::PathBuf::from("human/dark_Angry.mp4")
+        );
+        for invalid in [
+            "../secret.mp4",
+            "human/../../secret.mp4",
+            "human/dark_Angry.mp4/extra",
+            "human/dark_../secret.mp4",
+            "unknown/dark_Walk.mp4",
+            "human/blue_Walk.mp4",
+            "human/dark_.mp4",
+        ] {
+            assert!(
+                preview_asset_relative_path(invalid).is_err(),
+                "accepted {invalid}"
+            );
+        }
+    }
 
     #[test]
     fn mcp_status_matches_frontend_snake_case_contract() {

@@ -1,6 +1,6 @@
 pkgbase=mesh2motion-git
 pkgname=('mesh2motion-git' 'mesh2motion-mcp-git')
-pkgver=0.1.10.r60.g14ea57d
+pkgver=0.1.10.r62.gcf80f75
 pkgrel=1
 pkgdesc='Native Mesh2Motion desktop application for Arch Linux'
 arch=('x86_64')
@@ -8,8 +8,8 @@ url='https://github.com/Mesh2Motion/mesh2motion-desktop'
 license=('MIT' 'CC0-1.0')
 makedepends=('git' 'gtk3' 'webkit2gtk-4.1' 'nodejs' 'npm' 'openssl' 'rust>=1.88' 'pkgconf')
 
-_desktop_commit='14ea57db65af91c0777bbd62d21f156328256010'
-_frontend_commit='7297ae1f5ca443e936412eacad0074ca8bd38247'
+_desktop_commit='cf80f758e60b3f9943c80467175b0d1d986f55bf'
+_frontend_commit='8d2fa6e7e8fd74282a35eee93fff18c1790f1f19'
 _desktop_repo="${M2M_DESKTOP_GIT_URL:-https://github.com/Mesh2Motion/mesh2motion-desktop.git}"
 _frontend_repo="${M2M_FRONTEND_GIT_URL:-https://github.com/Mesh2Motion/mesh2motion-app.git}"
 
@@ -87,6 +87,9 @@ package_mesh2motion-git() {
     "${pkgdir}/usr/bin/mesh2motion"
   install -Dm755 "${srcdir}/cargo-target/release/mesh2motion" \
     "${pkgdir}/usr/lib/mesh2motion/mesh2motion"
+  install -d "${pkgdir}/usr/lib/mesh2motion/animpreviews"
+  cp -a "${tree}/mesh2motion-app/dist/animpreviews/." \
+    "${pkgdir}/usr/lib/mesh2motion/animpreviews/"
   install -Dm644 "${srcdir}/mesh2motion.desktop" \
     "${pkgdir}/usr/share/applications/mesh2motion.desktop"
   install -Dm644 "${tree}/src-tauri/icons/icon.png" \
