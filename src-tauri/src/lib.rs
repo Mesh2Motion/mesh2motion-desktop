@@ -18,7 +18,7 @@ fn preview_asset_relative_path(asset_key: &str) -> Result<PathBuf, String> {
             "human" | "fox" | "bird" | "dragon" | "kaiju" | "spider" | "snake" | "shark" | "horse"
         )
         || !(filename.starts_with("dark_") || filename.starts_with("light_"))
-        || !filename.ends_with(".mp4")
+        || !(filename.ends_with(".mp4") || filename.ends_with(".webp"))
     {
         return Err("INVALID_PREVIEW_ASSET".to_owned());
     }
@@ -26,7 +26,10 @@ fn preview_asset_relative_path(asset_key: &str) -> Result<PathBuf, String> {
     let animation = filename
         .strip_prefix("dark_")
         .or_else(|| filename.strip_prefix("light_"))
-        .and_then(|name| name.strip_suffix(".mp4"))
+        .and_then(|name| {
+            name.strip_suffix(".mp4")
+                .or_else(|| name.strip_suffix(".webp"))
+        })
         .unwrap_or_default();
     if animation.is_empty()
         || !animation.chars().all(|character| {
@@ -628,6 +631,10 @@ mod contract_tests {
             preview_asset_relative_path("human/dark_Angry.mp4").unwrap(),
             std::path::PathBuf::from("human/dark_Angry.mp4")
         );
+        assert_eq!(
+            preview_asset_relative_path("fox/light_Scratch Ear.webp").unwrap(),
+            std::path::PathBuf::from("fox/light_Scratch Ear.webp")
+        );
         for invalid in [
             "../secret.mp4",
             "human/../../secret.mp4",
@@ -636,6 +643,8 @@ mod contract_tests {
             "unknown/dark_Walk.mp4",
             "human/blue_Walk.mp4",
             "human/dark_.mp4",
+            "human/dark_Angry.png",
+            "human/dark_Angry.webp/extra",
         ] {
             assert!(
                 preview_asset_relative_path(invalid).is_err(),
