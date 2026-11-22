@@ -11,6 +11,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
+        "create": false,
         "title": "Mesh2Motion",
         "width": 1100,
         "height": 700,
