@@ -1,7 +1,7 @@
 pkgbase = mesh2motion-git
 	pkgdesc = Native Mesh2Motion desktop application for Arch Linux
 	pkgver = 0.1.10.r63.g8b9a795
-	pkgrel = 1
+	pkgrel = 2
 	url = https://github.com/Mesh2Motion/mesh2motion-desktop
 	arch = x86_64
 	license = MIT

@@ -1,7 +1,7 @@
 pkgbase=mesh2motion-git
 pkgname=('mesh2motion-git' 'mesh2motion-mcp-git')
 pkgver=0.1.10.r63.g8b9a795
-pkgrel=1
+pkgrel=2
 pkgdesc='Native Mesh2Motion desktop application for Arch Linux'
 arch=('x86_64')
 url='https://github.com/Mesh2Motion/mesh2motion-desktop'
@@ -87,9 +87,10 @@ package_mesh2motion-git() {
     "${pkgdir}/usr/bin/mesh2motion"
   install -Dm755 "${srcdir}/cargo-target/release/mesh2motion" \
     "${pkgdir}/usr/lib/mesh2motion/mesh2motion"
-  install -d "${pkgdir}/usr/lib/mesh2motion/animpreviews"
+  # Tauri resolves BaseDirectory::Resource to /usr/lib/<productName> on Linux.
+  install -d "${pkgdir}/usr/lib/Mesh2Motion/animpreviews"
   cp -a "${tree}/mesh2motion-app/dist/animpreviews/." \
-    "${pkgdir}/usr/lib/mesh2motion/animpreviews/"
+    "${pkgdir}/usr/lib/Mesh2Motion/animpreviews/"
   install -Dm644 "${srcdir}/mesh2motion.desktop" \
     "${pkgdir}/usr/share/applications/mesh2motion.desktop"
   install -Dm644 "${tree}/src-tauri/icons/icon.png" \
