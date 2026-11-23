@@ -80,9 +80,14 @@ pub struct PoseImageChunkResponse {
     pub image_ref: String,
     pub view: String,
     pub offset: usize,
+    #[serde(default)]
     pub mime: String,
+    #[serde(default)]
     pub total_bytes: usize,
+    #[serde(default)]
     pub bytes_base64: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<PoseObservationError>,
 }
 
 impl PoseImageChunkRequest {
@@ -111,17 +116,29 @@ impl PoseImageChunkRequest {
     }
 
     pub fn validate_response(&self, response: &PoseImageChunkResponse) -> bool {
+        if response.request_id != self.request_id
+            || response.session_id != self.session_id
+            || response.capture_id != self.capture_id
+            || response.image_ref != self.image_ref
+            || response.view != self.view
+            || response.offset != self.offset
+        {
+            return false;
+        }
+        if let Some(error) = &response.error {
+            return matches!(
+                error.code.as_str(),
+                "BAD_REQUEST" | "CAPTURE_EXPIRED" | "CAPTURE_NOT_FOUND" | "RESOURCE_LIMIT_EXCEEDED"
+            ) && response.mime.is_empty()
+                && response.total_bytes == 0
+                && response.bytes_base64.is_empty();
+        }
         let byte_limit = match response.mime.as_str() {
             "image/png" => 1024 * 1024,
             "image/jpeg" => 256 * 1024,
             _ => return false,
         };
-        response.request_id == self.request_id
-            && response.session_id == self.session_id
-            && response.capture_id == self.capture_id
-            && response.image_ref == self.image_ref
-            && response.view == self.view
-            && response.offset == self.offset
+        response.error.is_none()
             && response.total_bytes > 0
             && response.total_bytes <= byte_limit
             && self.offset < response.total_bytes
@@ -292,5 +309,40 @@ mod tests {
         let mut invalid = valid;
         invalid.image_ref = "/tmp/capture.png".into();
         assert_eq!(invalid.validate().unwrap_err().code, "BAD_REQUEST");
+    }
+
+    #[test]
+    fn image_chunk_error_responses_are_correlated_and_closed() {
+        let request = PoseImageChunkRequest {
+            request_id: "chunk-1".into(),
+            session_id: "session-1".into(),
+            capture_id: "capture-1".into(),
+            image_ref: "capture-1:front".into(),
+            view: "front".into(),
+            offset: 0,
+            max_bytes: 1024,
+        };
+        let response = PoseImageChunkResponse {
+            request_id: request.request_id.clone(),
+            session_id: request.session_id.clone(),
+            capture_id: request.capture_id.clone(),
+            image_ref: request.image_ref.clone(),
+            view: request.view.clone(),
+            offset: request.offset,
+            mime: String::new(),
+            total_bytes: 0,
+            bytes_base64: String::new(),
+            error: Some(PoseObservationError {
+                code: "CAPTURE_EXPIRED".into(),
+                message: "capture expired".into(),
+            }),
+        };
+        assert!(request.validate_response(&response));
+        let mut uncorrelated = response.clone();
+        uncorrelated.session_id = "other-session".into();
+        assert!(!request.validate_response(&uncorrelated));
+        let mut unknown = response;
+        unknown.error.as_mut().unwrap().code = "FILESYSTEM_READ".into();
+        assert!(!request.validate_response(&unknown));
     }
 }

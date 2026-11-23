@@ -196,11 +196,14 @@ class McpStdioClient:
         if not self.stdin.closed:
             self.stdin.close()
         if self.process.poll() is None:
-            self.process.terminate()
-        try:
-            self.process.wait(timeout=3)
-        except subprocess.TimeoutExpired:
-            self.process.kill()
-            self.process.wait()
+            try:
+                self.process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                self.process.terminate()
+                try:
+                    self.process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                    self.process.wait()
         self.reader_thread.join(timeout=1)
         self.transcript.close()

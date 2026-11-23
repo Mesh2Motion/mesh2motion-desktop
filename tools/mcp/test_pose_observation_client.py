@@ -76,3 +76,47 @@ def test_observe_pose_requires_unique_supported_views_before_rpc() -> None:
             timestamp_seconds=0.5,
             views=["desktop"],
         )
+
+
+def test_close_waits_for_graceful_mcp_shutdown_before_terminating() -> None:
+    events: list[str] = []
+
+    class Stdin:
+        closed = False
+
+        def close(self) -> None:
+            events.append("stdin-close")
+            self.closed = True
+
+    class Process:
+        def poll(self) -> None:
+            return None
+
+        def wait(self, timeout: float | None = None) -> int:
+            del timeout
+            events.append("wait")
+            return 0
+
+        def terminate(self) -> None:
+            events.append("terminate")
+
+        def kill(self) -> None:
+            events.append("kill")
+
+    class ReaderThread:
+        def join(self, timeout: float | None = None) -> None:
+            del timeout
+
+    class Transcript:
+        def close(self) -> None:
+            events.append("transcript-close")
+
+    client = McpStdioClient.__new__(McpStdioClient)
+    client.stdin = Stdin()  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
+    client.process = Process()  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
+    client.reader_thread = ReaderThread()  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
+    client.transcript = Transcript()  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
+    client.close()
+
+    assert events[:2] == ["stdin-close", "wait"]
+    assert "terminate" not in events

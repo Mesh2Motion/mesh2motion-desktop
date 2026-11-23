@@ -45,6 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let service = mcp.serve(stdio()).await?;
     let wait_result = service.waiting().await;
     cleanup.dispose_observation_captures().await;
+    cleanup.cancel_authoring_session().await;
     wait_result?;
     Ok(())
 }

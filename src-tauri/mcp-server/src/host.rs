@@ -129,7 +129,7 @@ impl AuthoringGuard {
 
 #[derive(Default)]
 struct ObservationGuardState {
-    seen_ids: HashSet<String>,
+    seen_ids: HashMap<String, String>,
     last_sequence: HashMap<String, u64>,
 }
 
@@ -146,7 +146,7 @@ impl ObservationGuard {
             return Err("SESSION_CONFLICT".into());
         }
         let mut state = self.0.lock().map_err(|_| "INTERNAL".to_owned())?;
-        if state.seen_ids.contains(&request.request_id) {
+        if state.seen_ids.contains_key(&request.request_id) {
             return Err("DUPLICATE_REQUEST_ID".into());
         }
         if state.seen_ids.len() >= MAX_AUTHORING_REQUEST_IDS {
@@ -166,7 +166,9 @@ impl ObservationGuard {
         {
             return Err("SESSION_CONFLICT".into());
         }
-        state.seen_ids.insert(request.request_id.clone());
+        state
+            .seen_ids
+            .insert(request.request_id.clone(), request.session_id.clone());
         state
             .last_sequence
             .insert(request.session_id.clone(), request.sequence);
@@ -176,6 +178,7 @@ impl ObservationGuard {
     fn clear_session(&self, session_id: &str) {
         if let Ok(mut state) = self.0.lock() {
             state.last_sequence.remove(session_id);
+            state.seen_ids.retain(|_, owner| owner != session_id);
         }
     }
 }
@@ -849,6 +852,7 @@ mod tests {
                     mime: "image/png".into(),
                     total_bytes: 4,
                     bytes_base64: "AQIDBA==".into(),
+                    error: None,
                 })
             })
         });
@@ -1040,6 +1044,8 @@ mod tests {
             guard.reserve(&foreign, true),
             Err("SESSION_CONFLICT".into())
         );
+        guard.clear_session("session-1");
+        assert_eq!(guard.reserve(&foreign, true), Ok(()));
     }
 
     #[test]

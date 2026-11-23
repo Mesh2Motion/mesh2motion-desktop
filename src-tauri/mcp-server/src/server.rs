@@ -282,8 +282,14 @@ impl Mesh2MotionMcp {
         if !matches!(image_mime, "image/png" | "image/jpeg") {
             return fail("BAD_REQUEST", "image MIME type is unsupported");
         }
-        // Force image_ref retrieval; image bytes never travel in the 256 KiB JSON envelope.
-        let max_image_bytes = 1usize;
+        // Allow the contract maximum per image. Inline bytes are only optional;
+        // the frontend strips them when the complete observation approaches the
+        // 256 KiB response ceiling, leaving image_ref retrieval for MCP clients.
+        let max_image_bytes = if image_mime == "image/png" {
+            1024 * 1024
+        } else {
+            256 * 1024
+        };
         let payload = json!({
             "rig_fingerprint": catalog.fingerprint,
             "draft_id": self.authoring_session_id,
@@ -304,7 +310,7 @@ impl Mesh2MotionMcp {
             .saturating_add(1);
         let request = PoseObservationRequest {
             protocol: POSE_OBSERVATION_PROTOCOL.into(),
-            request_id: format!("pose-request-{sequence}"),
+            request_id: pose_request_id(&self.authoring_session_id, sequence),
             session_id: self.authoring_session_id.clone(),
             sequence,
             deadline_ms: 30_000,
@@ -617,6 +623,9 @@ impl Mesh2MotionMcp {
                     )
                 }
             };
+            if let Some(error) = chunk.error.as_ref() {
+                return fail(&error.code, &error.message);
+            }
             if chunk.mime != mime || chunk.total_bytes != expected_bytes {
                 return fail("INTERNAL", "image metadata changed between chunks");
             }
@@ -671,7 +680,7 @@ impl Mesh2MotionMcp {
                 .saturating_add(1);
             let request = PoseObservationRequest {
                 protocol: POSE_OBSERVATION_PROTOCOL.into(),
-                request_id: format!("pose-dispose-{sequence}-{index}"),
+                request_id: pose_dispose_request_id(&self.authoring_session_id, sequence, index),
                 session_id: self.authoring_session_id.clone(),
                 sequence,
                 deadline_ms: 1_000,
@@ -682,6 +691,21 @@ impl Mesh2MotionMcp {
         }
         if let Ok(mut captures) = self.observation_captures.lock() {
             captures.clear();
+        }
+    }
+
+    /// Release the single app-side authoring session when this stdio peer exits.
+    /// A later MCP process receives a new session ID and otherwise cannot replace
+    /// the frontend dispatcher's retained prior session.
+    pub async fn cancel_authoring_session(&self) {
+        let response = self
+            .authoring_call(AuthoringOperation::SessionCancel, serde_json::json!({}))
+            .await;
+        if response.0.ok {
+            let _ = self.drafts.remove(&self.authoring_session_id);
+            if let Ok(mut captures) = self.observation_captures.lock() {
+                captures.clear();
+            }
         }
     }
 }
@@ -708,6 +732,14 @@ fn authoring_error_code(code: AuthoringErrorCode) -> &'static str {
         AuthoringErrorCode::AuthoringDisabled => "AUTHORING_DISABLED",
         AuthoringErrorCode::AppDisconnected => "APP_DISCONNECTED",
     }
+}
+
+fn pose_request_id(session_id: &str, sequence: u64) -> String {
+    format!("pose-{session_id}-{sequence}")
+}
+
+fn pose_dispose_request_id(session_id: &str, sequence: u64, index: usize) -> String {
+    format!("dispose-{session_id}-{sequence}-{index}")
 }
 
 #[cfg(test)]
@@ -1856,13 +1888,18 @@ impl Mesh2MotionMcp {
         let response = self
             .authoring_call(AuthoringOperation::SessionCancel, serde_json::json!({}))
             .await;
-        if response.0.ok {
-            let _ = self.drafts.remove(&self.authoring_session_id);
-            if let Ok(mut captures) = self.observation_captures.lock() {
-                captures.clear();
-            }
-        }
+        self.clear_session_state_if_cancelled(response.0.ok);
         response
+    }
+
+    fn clear_session_state_if_cancelled(&self, cancelled: bool) {
+        if !cancelled {
+            return;
+        }
+        let _ = self.drafts.remove(&self.authoring_session_id);
+        if let Ok(mut captures) = self.observation_captures.lock() {
+            captures.clear();
+        }
     }
 }
 
@@ -2010,6 +2047,18 @@ mod image_transport_tests {
         assert_eq!(decode_base64("AQ=Z"), None);
         assert_eq!(decode_base64("AQ==AAAA"), None);
         assert_eq!(decode_base64("A==="), None);
+    }
+
+    #[test]
+    fn observation_request_ids_are_unique_across_sidecar_sessions() {
+        let first = pose_request_id("mcp-100-123456", 1);
+        let second = pose_request_id("mcp-101-123456", 1);
+        assert_ne!(first, second);
+        assert!(first.len() <= crate::MAX_POSE_ID_BYTES);
+        assert_ne!(
+            pose_dispose_request_id("mcp-100-123456", 1, 0),
+            pose_dispose_request_id("mcp-101-123456", 1, 0)
+        );
     }
 
     #[test]
