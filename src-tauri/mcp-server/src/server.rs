@@ -961,7 +961,7 @@ impl Mesh2MotionMcp {
 
     #[tool(
         name = "animation_commit_draft",
-        description = "Commit a draft to the native animation library after digest-bound user approval."
+        description = "Commit a draft through the trusted native MCP path with authorization bound to the exact request and document digest."
     )]
     pub async fn animation_commit_draft(
         &self,

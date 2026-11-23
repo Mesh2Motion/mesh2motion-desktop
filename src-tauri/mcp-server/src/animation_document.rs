@@ -1,6 +1,6 @@
 //! Typed mirror and bounded, session-scoped draft storage for AnimationDocument v1.
-//! This module is intentionally not exposed as MCP tools until the native
-//! frontend request/confirmation bridge is implemented.
+//! Mutations are exposed only through the validated trusted native frontend
+//! request/response bridge.
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
