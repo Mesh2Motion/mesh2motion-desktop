@@ -241,6 +241,12 @@ pub enum DraftError {
     LockPoisoned,
 }
 
+/// Identity and catalog are read directly from the live application skeleton.
+pub struct LiveRigCatalog<'a> {
+    pub fingerprint: &'a str,
+    pub bones: &'a [AnimationBone],
+}
+
 #[derive(Clone)]
 struct Draft {
     current: AnimationDocument,
@@ -303,6 +309,49 @@ impl AnimationDraftStore {
             .get(session)
             .map(|d| d.current.clone())
             .ok_or(DraftError::Missing)
+    }
+
+    /// Atomically replace one channel's keyframes and append a new revision.
+    /// This is the bounded primitive used by a future incremental MCP operation;
+    /// it deliberately accepts only a live catalog supplied by the application.
+    pub fn set_bone_keyframes(
+        &self,
+        session: &str,
+        expected_revision: u64,
+        replacement: AnimationChannel,
+        live_rig: LiveRigCatalog<'_>,
+    ) -> Result<AnimationDocument, DraftError> {
+        if replacement.keyframes.len() > MAX_KEYFRAMES {
+            return Err(DraftError::Invalid(vec!["too many keyframes".into()]));
+        }
+        let encoded = serde_json::to_vec(&replacement).map_err(|_| DraftError::TooLarge)?;
+        if encoded.len() > MAX_DOCUMENT_BYTES {
+            return Err(DraftError::TooLarge);
+        }
+
+        let mut next = self.get(session)?;
+        if next.revision != expected_revision {
+            return Err(DraftError::RevisionConflict);
+        }
+        let next_revision = expected_revision
+            .checked_add(1)
+            .ok_or(DraftError::RevisionConflict)?;
+        let channel = next.channels.iter_mut().find(|channel| {
+            channel.bone_id == replacement.bone_id && channel.property == replacement.property
+        });
+        if let Some(channel) = channel {
+            channel.keyframes = replacement.keyframes;
+        } else {
+            next.channels.push(replacement);
+        }
+        next.revision = next_revision;
+        self.commit(
+            session,
+            expected_revision,
+            next,
+            live_rig.fingerprint,
+            live_rig.bones,
+        )
     }
 
     pub fn commit(
@@ -506,6 +555,123 @@ mod tests {
             Err(DraftError::RevisionConflict)
         );
         assert_eq!(store.get("client-1").unwrap(), next);
+    }
+
+    #[test]
+    fn keyframe_replacement_appends_revision_atomically() {
+        let (doc, bones) = valid();
+        let store = AnimationDraftStore::default();
+        let fingerprint = "a".repeat(64);
+        store
+            .create("client-1", doc.clone(), &fingerprint, &bones)
+            .unwrap();
+
+        let replacement = vec![
+            AnimationKeyframe {
+                time_seconds: 0.0,
+                values: vec![0.0, 0.0, 0.0, 1.0],
+                interpolation: Interpolation::Slerp,
+            },
+            AnimationKeyframe {
+                time_seconds: 0.5,
+                values: vec![
+                    0.0,
+                    0.0,
+                    std::f64::consts::FRAC_1_SQRT_2,
+                    std::f64::consts::FRAC_1_SQRT_2,
+                ],
+                interpolation: Interpolation::Slerp,
+            },
+        ];
+        let committed = store
+            .set_bone_keyframes(
+                "client-1",
+                1,
+                AnimationChannel {
+                    bone_id: bones[0].id.clone(),
+                    property: AnimationProperty::Quaternion,
+                    keyframes: replacement.clone(),
+                },
+                LiveRigCatalog {
+                    fingerprint: &fingerprint,
+                    bones: &bones,
+                },
+            )
+            .unwrap();
+        assert_eq!(committed.revision, 2);
+        assert_eq!(committed.channels[0].keyframes, replacement);
+
+        let before_rejection = store.get("client-1").unwrap();
+        let invalid = store.set_bone_keyframes(
+            "client-1",
+            2,
+            AnimationChannel {
+                bone_id: "human:bone:999".into(),
+                property: AnimationProperty::Position,
+                keyframes: vec![AnimationKeyframe {
+                    time_seconds: 0.0,
+                    values: vec![0.0, 0.0, 0.0],
+                    interpolation: Interpolation::Linear,
+                }],
+            },
+            LiveRigCatalog {
+                fingerprint: &fingerprint,
+                bones: &bones,
+            },
+        );
+        assert!(matches!(invalid, Err(DraftError::Invalid(_))));
+        assert_eq!(store.get("client-1").unwrap(), before_rejection);
+
+        let stale = store.set_bone_keyframes(
+            "client-1",
+            1,
+            AnimationChannel {
+                bone_id: bones[0].id.clone(),
+                property: AnimationProperty::Quaternion,
+                keyframes: replacement,
+            },
+            LiveRigCatalog {
+                fingerprint: &fingerprint,
+                bones: &bones,
+            },
+        );
+        assert_eq!(stale, Err(DraftError::RevisionConflict));
+        assert_eq!(store.get("client-1").unwrap(), before_rejection);
+    }
+
+    #[test]
+    fn keyframe_replacement_rejects_payload_over_limits_without_mutation() {
+        let (doc, bones) = valid();
+        let store = AnimationDraftStore::default();
+        let fingerprint = "a".repeat(64);
+        store
+            .create("client-1", doc.clone(), &fingerprint, &bones)
+            .unwrap();
+        let too_many = vec![
+            AnimationKeyframe {
+                time_seconds: 0.0,
+                values: vec![0.0, 0.0, 0.0, 1.0],
+                interpolation: Interpolation::Slerp,
+            };
+            MAX_KEYFRAMES + 1
+        ];
+        assert!(matches!(
+            store.set_bone_keyframes(
+                "client-1",
+                1,
+                AnimationChannel {
+                    bone_id: bones[0].id.clone(),
+                    property: AnimationProperty::Quaternion,
+                    keyframes: too_many,
+                },
+                LiveRigCatalog {
+                    fingerprint: &fingerprint,
+                    bones: &bones,
+                },
+            ),
+            Err(DraftError::Invalid(_))
+        ));
+        assert_eq!(store.get("client-1").unwrap(), doc);
     }
 
     #[test]
