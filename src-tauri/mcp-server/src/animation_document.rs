@@ -109,7 +109,7 @@ impl AnimationDocument {
         if self.schema_version != ANIMATION_DOCUMENT_SCHEMA {
             errors.push("unsupported schema_version".into());
         }
-        if self.rig.identifier.is_empty() || self.rig.identifier.len() > 128 {
+        if self.rig.identifier.is_empty() {
             errors.push("invalid rig identifier".into());
         }
         if self.rig.fingerprint != fingerprint {
@@ -123,10 +123,33 @@ impl AnimationDocument {
         if self.bones.len() > MAX_BONES {
             errors.push("too many bones".into());
         }
+        if self.bones.is_empty() {
+            errors.push("bone catalog must not be empty".into());
+        }
         if self.bones != catalog {
             errors.push("bone catalog differs from live rig".into());
         }
-        if self.clip.name.trim().is_empty() || self.clip.name.len() > 256 {
+        let mut bone_ids = std::collections::HashSet::new();
+        let mut bone_indices = std::collections::HashSet::new();
+        for bone in &self.bones {
+            if bone.id.is_empty() || !bone_ids.insert(bone.id.as_str()) {
+                errors.push("bone IDs must be non-empty and unique".into());
+            }
+            if !bone_indices.insert(bone.index) {
+                errors.push("bone indices must be unique".into());
+            }
+            if bone.parent_id.as_deref() == Some(bone.id.as_str()) {
+                errors.push(format!("bone {} cannot parent itself", bone.id));
+            }
+            if bone
+                .parent_id
+                .as_deref()
+                .is_some_and(|parent| !self.bones.iter().any(|candidate| candidate.id == parent))
+            {
+                errors.push(format!("unknown parent_id for bone {}", bone.id));
+            }
+        }
+        if self.clip.name.trim().is_empty() {
             errors.push("invalid clip name".into());
         }
         if !self.clip.duration_seconds.is_finite()
@@ -135,7 +158,7 @@ impl AnimationDocument {
         {
             errors.push("duration must satisfy 0 < d <= 3600 seconds".into());
         }
-        if self.revision == 0 {
+        if self.revision == 0 || self.revision > 9_007_199_254_740_991 {
             errors.push("revision must be positive".into());
         }
         if self.channels.len() > MAX_CHANNELS {
@@ -152,19 +175,26 @@ impl AnimationDocument {
             if !channel_keys.insert((channel.bone_id.as_str(), channel.property as u8)) {
                 errors.push("duplicate channel".into());
             }
-            let mut previous = -1.0;
+            if channel.keyframes.is_empty() {
+                errors.push("channel must contain keyframes".into());
+            }
+            let mut previous = f64::NEG_INFINITY;
             for frame in &channel.keyframes {
                 keyframe_count = keyframe_count.saturating_add(1);
-                if !frame.time_seconds.is_finite()
-                    || frame.time_seconds <= previous
-                    || frame.time_seconds > self.clip.duration_seconds
-                {
-                    errors.push(
-                        "keyframe times must be finite, strictly increasing and within duration"
-                            .into(),
-                    );
+                if !frame.time_seconds.is_finite() {
+                    errors.push("keyframe time must be finite".into());
+                } else {
+                    if frame.time_seconds < 0.0 {
+                        errors.push("keyframe time must be non-negative".into());
+                    }
+                    if frame.time_seconds <= previous {
+                        errors.push("keyframe times must be strictly increasing".into());
+                    }
+                    if frame.time_seconds > self.clip.duration_seconds {
+                        errors.push("keyframe time exceeds clip duration".into());
+                    }
+                    previous = frame.time_seconds;
                 }
-                previous = frame.time_seconds;
                 let expected = if channel.property == AnimationProperty::Quaternion {
                     4
                 } else {
@@ -226,7 +256,7 @@ impl AnimationDraftStore {
     pub fn create(
         &self,
         session: &str,
-        document: AnimationDocument,
+        mut document: AnimationDocument,
         fingerprint: &str,
         catalog: &[AnimationBone],
     ) -> Result<(), DraftError> {
@@ -244,6 +274,10 @@ impl AnimationDraftStore {
         document
             .validate(fingerprint, catalog)
             .map_err(DraftError::Invalid)?;
+        document.validation = AnimationValidation {
+            state: ValidationState::Valid,
+            errors: Vec::new(),
+        };
         let mut entries = self.0.lock().map_err(|_| DraftError::LockPoisoned)?;
         if entries.contains_key(session) {
             return Err(DraftError::RevisionConflict);
@@ -275,7 +309,7 @@ impl AnimationDraftStore {
         &self,
         session: &str,
         expected_revision: u64,
-        next: AnimationDocument,
+        mut next: AnimationDocument,
         fingerprint: &str,
         catalog: &[AnimationBone],
     ) -> Result<AnimationDocument, DraftError> {
@@ -287,9 +321,15 @@ impl AnimationDraftStore {
         }
         next.validate(fingerprint, catalog)
             .map_err(DraftError::Invalid)?;
+        next.validation = AnimationValidation {
+            state: ValidationState::Valid,
+            errors: Vec::new(),
+        };
         let mut entries = self.0.lock().map_err(|_| DraftError::LockPoisoned)?;
         let draft = entries.get_mut(session).ok_or(DraftError::Missing)?;
-        if draft.current.revision != expected_revision || next.revision != expected_revision + 1 {
+        if draft.current.revision != expected_revision
+            || Some(next.revision) != expected_revision.checked_add(1)
+        {
             return Err(DraftError::RevisionConflict);
         }
         draft.current = next.clone();
@@ -299,6 +339,53 @@ impl AnimationDraftStore {
             draft.history.remove(0);
         }
         Ok(next)
+    }
+
+    /// Restore a retained snapshot as a new revision without rewriting history.
+    pub fn undo(
+        &self,
+        session: &str,
+        expected_revision: u64,
+        target_revision: u64,
+        fingerprint: &str,
+        catalog: &[AnimationBone],
+    ) -> Result<AnimationDocument, DraftError> {
+        let mut entries = self.0.lock().map_err(|_| DraftError::LockPoisoned)?;
+        let draft = entries.get_mut(session).ok_or(DraftError::Missing)?;
+        if draft.current.revision != expected_revision {
+            return Err(DraftError::RevisionConflict);
+        }
+        let Some(mut restored) = draft
+            .history
+            .iter()
+            .find(|document| document.revision == target_revision)
+            .cloned()
+        else {
+            return Err(DraftError::Missing);
+        };
+        restored.revision = expected_revision
+            .checked_add(1)
+            .ok_or(DraftError::RevisionConflict)?;
+        restored
+            .validate(fingerprint, catalog)
+            .map_err(DraftError::Invalid)?;
+        restored.validation = AnimationValidation {
+            state: ValidationState::Valid,
+            errors: Vec::new(),
+        };
+        let bytes = serde_json::to_vec(&restored)
+            .map_err(|_| DraftError::TooLarge)?
+            .len();
+        if bytes > MAX_DOCUMENT_BYTES {
+            return Err(DraftError::TooLarge);
+        }
+        draft.bytes = bytes;
+        draft.current = restored.clone();
+        draft.history.push(restored.clone());
+        if draft.history.len() > MAX_HISTORY {
+            draft.history.remove(0);
+        }
+        Ok(restored)
     }
 
     pub fn remove(&self, session: &str) -> Result<(), DraftError> {
@@ -374,6 +461,32 @@ mod tests {
         });
         assert!(doc.validate(&"a".repeat(64), &bones).unwrap_err().len() >= 2);
     }
+
+    #[test]
+    fn rejects_negative_first_keyframe_time() {
+        let (mut doc, bones) = valid();
+        doc.channels[0].keyframes[0].time_seconds = -0.1;
+        assert!(doc
+            .validate(&"a".repeat(64), &bones)
+            .unwrap_err()
+            .iter()
+            .any(|error| error.contains("non-negative")));
+    }
+
+    #[test]
+    fn rejects_malformed_catalog_and_empty_channels() {
+        let (mut doc, mut bones) = valid();
+        bones[0].parent_id = Some(bones[0].id.clone());
+        doc.bones = bones.clone();
+        doc.channels[0].keyframes.clear();
+        let errors = doc.validate(&"a".repeat(64), &bones).unwrap_err();
+        assert!(errors
+            .iter()
+            .any(|error| error.contains("cannot parent itself")));
+        assert!(errors
+            .iter()
+            .any(|error| error.contains("channel must contain keyframes")));
+    }
     #[test]
     fn mutation_is_revision_checked_and_atomic() {
         let (doc, bones) = valid();
@@ -393,5 +506,26 @@ mod tests {
             Err(DraftError::RevisionConflict)
         );
         assert_eq!(store.get("client-1").unwrap(), next);
+    }
+
+    #[test]
+    fn undo_restores_snapshot_as_new_revision() {
+        let (doc, bones) = valid();
+        let store = AnimationDraftStore::default();
+        let fp = "a".repeat(64);
+        store.create("client-1", doc.clone(), &fp, &bones).unwrap();
+        let mut next = doc.clone();
+        next.revision = 2;
+        next.clip.name = "run".into();
+        store.commit("client-1", 1, next, &fp, &bones).unwrap();
+
+        let restored = store.undo("client-1", 2, 1, &fp, &bones).unwrap();
+        assert_eq!(restored.revision, 3);
+        assert_eq!(restored.clip.name, "walk");
+        assert_eq!(store.get("client-1").unwrap(), restored);
+        assert_eq!(
+            store.get("client-1").unwrap().validation.state,
+            ValidationState::Valid
+        );
     }
 }

@@ -590,10 +590,10 @@ pub fn run() {
 
     // Stop the optional MCP host at Tauri's explicit shutdown boundary so the
     // listener thread can remove its socket before managed state is torn down.
-    app.run(|app_handle, event| {
+    app.run(|_app_handle, event| {
         if let tauri::RunEvent::Exit = event {
             #[cfg(feature = "mcp-host")]
-            if let Some(state) = app_handle.try_state::<McpHostState>() {
+            if let Some(state) = _app_handle.try_state::<McpHostState>() {
                 if let Err(error) = state.disable() {
                     eprintln!("M2M_HOST shutdown_error={error}");
                 }
