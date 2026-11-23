@@ -154,8 +154,12 @@ struct AuthoringBridgeState {
 struct PendingAuthoring {
     session_id: String,
     sequence: u64,
-    operation: AuthoringOperation,
     sender: SyncSender<AuthoringResponse>,
+}
+
+#[cfg(feature = "mcp-host")]
+fn mcp_operation_grants_authoring(operation: AuthoringOperation) -> bool {
+    operation != AuthoringOperation::RigCatalogGet
 }
 
 #[cfg(feature = "mcp-host")]
@@ -180,6 +184,12 @@ impl AuthoringBridgeState {
 
     fn is_enabled(&self) -> bool {
         self.enabled.load(Ordering::Acquire)
+    }
+
+    fn authorize_mcp_request(&self, operation: AuthoringOperation) {
+        if mcp_operation_grants_authoring(operation) {
+            self.enabled.store(true, Ordering::Release);
+        }
     }
 
     fn disable(&self) {
@@ -213,6 +223,12 @@ struct BridgeWait {
     bridge: Arc<AuthoringBridgeState>,
     request_id: String,
     session_id: String,
+    completed: bool,
+}
+
+#[cfg(feature = "mcp-host")]
+fn should_cancel_authoring_wait(completed: bool) -> bool {
+    !completed
 }
 
 #[cfg(feature = "mcp-host")]
@@ -220,10 +236,12 @@ impl Future for BridgeWait {
     type Output = AuthoringResponse;
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
-        let Ok(mut state) = self.state.lock() else {
+        let this = self.get_mut();
+        let Ok(mut state) = this.state.lock() else {
             return Poll::Pending;
         };
         if let Some(response) = state.result.take() {
+            this.completed = true;
             return Poll::Ready(response);
         }
         state.waker = Some(context.waker().clone());
@@ -234,6 +252,9 @@ impl Future for BridgeWait {
 #[cfg(feature = "mcp-host")]
 impl Drop for BridgeWait {
     fn drop(&mut self) {
+        if !should_cancel_authoring_wait(self.completed) {
+            return;
+        }
         self.cancelled.store(true, Ordering::Release);
         let _ = self.bridge.app.emit(
             "m2m-authoring-cancel",
@@ -261,14 +282,6 @@ fn make_authoring_handler(state: &Arc<AuthoringBridgeState>) -> AuthoringHandler
                 ))
             });
         };
-        if !state.is_enabled() && request.operation != AuthoringOperation::RigCatalogGet {
-            return Box::pin(async move {
-                request.error_response(request.error(
-                    AuthoringErrorCode::AuthoringDisabled,
-                    "authoring requires explicit native opt-in",
-                ))
-            });
-        }
         if !state.frontend_ready.load(Ordering::Acquire) {
             return Box::pin(async move {
                 request.error_response(request.error(
@@ -277,6 +290,9 @@ fn make_authoring_handler(state: &Arc<AuthoringBridgeState>) -> AuthoringHandler
                 ))
             });
         }
+        // A valid authoring request over the private same-UID MCP socket
+        // authorizes this app session. Live catalog discovery stays read-only.
+        state.authorize_mcp_request(request.operation);
         let (sender, receiver) = mpsc::sync_channel(1);
         let inserted = state
             .pending
@@ -288,7 +304,6 @@ fn make_authoring_handler(state: &Arc<AuthoringBridgeState>) -> AuthoringHandler
                         PendingAuthoring {
                             session_id: request.session_id.clone(),
                             sequence: request.sequence,
-                            operation: request.operation,
                             sender,
                         },
                     );
@@ -358,6 +373,7 @@ fn make_authoring_handler(state: &Arc<AuthoringBridgeState>) -> AuthoringHandler
             bridge: state,
             request_id: request.request_id,
             session_id: request.session_id,
+            completed: false,
         })
     })
 }
@@ -634,9 +650,6 @@ fn mcp_authoring_respond(
         eprintln!("M2M_AUTHORING response_rejected reason=correlation");
         return Err("AUTHORING_RESPONSE_MISMATCH".to_owned());
     }
-    if !state.authoring.is_enabled() && entry.operation != AuthoringOperation::RigCatalogGet {
-        return Err("AUTHORING_DISABLED".to_owned());
-    }
     entry
         .sender
         .try_send(response)
@@ -645,20 +658,7 @@ fn mcp_authoring_respond(
     Ok(())
 }
 
-/// Called only from a native UI control after explicit user action. Each app
-/// launch starts disabled; this permission is deliberately not persisted.
-#[cfg(feature = "mcp-host")]
-#[tauri::command]
-fn mcp_authoring_set_enabled(enabled: bool, state: State<'_, McpHostState>) -> Result<(), String> {
-    if enabled {
-        state.authoring.enabled.store(true, Ordering::Release);
-    } else {
-        state.authoring.disable();
-    }
-    Ok(())
-}
-
-/// Frontend event-listener readiness; this does not grant authoring permission.
+/// Frontend event-listener readiness; permission is granted by an MCP authoring request.
 #[cfg(feature = "mcp-host")]
 #[tauri::command]
 fn mcp_authoring_frontend_set_ready(
@@ -918,8 +918,6 @@ pub fn run() {
             #[cfg(feature = "mcp-host")]
             mcp_authoring_respond,
             #[cfg(feature = "mcp-host")]
-            mcp_authoring_set_enabled,
-            #[cfg(feature = "mcp-host")]
             mcp_authoring_frontend_set_ready,
             #[cfg(feature = "mcp-host")]
             mcp_authoring_frontend_stage
@@ -943,7 +941,32 @@ pub fn run() {
 
 #[cfg(test)]
 mod contract_tests {
+    #[cfg(feature = "mcp-host")]
+    use super::{mcp_operation_grants_authoring, should_cancel_authoring_wait};
     use super::{preview_asset_relative_path, McpHostStatus};
+    #[cfg(feature = "mcp-host")]
+    use mesh2motion_mcp::AuthoringOperation;
+
+    #[cfg(feature = "mcp-host")]
+    #[test]
+    fn live_catalog_is_read_only_but_mcp_authoring_operations_grant_session_access() {
+        assert!(!mcp_operation_grants_authoring(
+            AuthoringOperation::RigCatalogGet
+        ));
+        assert!(mcp_operation_grants_authoring(
+            AuthoringOperation::SessionStatus
+        ));
+        assert!(mcp_operation_grants_authoring(
+            AuthoringOperation::DraftCreate
+        ));
+    }
+
+    #[cfg(feature = "mcp-host")]
+    #[test]
+    fn completed_authoring_response_drop_does_not_cancel_the_session() {
+        assert!(!should_cancel_authoring_wait(true));
+        assert!(should_cancel_authoring_wait(false));
+    }
 
     #[test]
     fn preview_asset_keys_are_narrow_and_relative() {

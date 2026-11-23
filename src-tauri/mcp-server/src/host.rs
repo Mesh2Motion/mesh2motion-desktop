@@ -75,6 +75,7 @@ impl AuthoringGuard {
             AuthoringOperation::RigCatalogGet
                 | AuthoringOperation::DraftValidate
                 | AuthoringOperation::SessionStatus
+                | AuthoringOperation::SessionCancel
         );
         if state.active_session.is_none() && !starts_session && !read_without_session {
             return Err(AuthoringErrorCode::SessionConflict);
@@ -96,7 +97,12 @@ impl AuthoringGuard {
                 AuthoringOperation::DraftCreate | AuthoringOperation::DraftImport
             ) && !response.ok;
             let cancelled = request.operation == AuthoringOperation::SessionCancel && response.ok;
-            if (session_start_failed || cancelled)
+            if cancelled {
+                if state.active_session.as_deref() == Some(request.session_id.as_str()) {
+                    state.active_session = None;
+                }
+                state.last_sequence.remove(&request.session_id);
+            } else if session_start_failed
                 && state.active_session.as_deref() == Some(request.session_id.as_str())
             {
                 state.active_session = None;
@@ -694,6 +700,30 @@ mod tests {
         retry.request_id = "retry-session".into();
         retry.sequence = 1;
         assert_eq!(guard.reserve(&retry), Ok(()));
+    }
+
+    #[test]
+    fn session_cancel_cleans_up_a_status_only_session() {
+        let guard = AuthoringGuard::default();
+        let mut status = sample_authoring_request();
+        status.request_id = "status-only".into();
+        status.operation = AuthoringOperation::SessionStatus;
+        status.payload = serde_json::json!({});
+        assert_eq!(guard.reserve(&status), Ok(()));
+
+        let mut cancel = status.clone();
+        cancel.request_id = "cancel-status-only".into();
+        cancel.sequence = 2;
+        cancel.operation = AuthoringOperation::SessionCancel;
+        assert_eq!(guard.reserve(&cancel), Ok(()));
+        guard.finish(
+            &cancel,
+            &cancel.success_response(serde_json::json!({"cancelled": true})),
+        );
+
+        let state = guard.0.lock().unwrap();
+        assert!(state.active_session.is_none());
+        assert!(!state.last_sequence.contains_key(&status.session_id));
     }
 
     #[tokio::test]
