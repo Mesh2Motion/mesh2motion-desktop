@@ -40,10 +40,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // MCP protocol bytes use stdout exclusively; diagnostics stay on stderr.
-    let service = Mesh2MotionMcp::new(Arc::new(IpcClient::from_environment()))
-        .serve(stdio())
-        .await?;
-    service.waiting().await?;
+    let mcp = Mesh2MotionMcp::new(Arc::new(IpcClient::from_environment()));
+    let cleanup = mcp.clone();
+    let service = mcp.serve(stdio()).await?;
+    let wait_result = service.waiting().await;
+    cleanup.dispose_observation_captures().await;
+    cleanup.cancel_authoring_session().await;
+    wait_result?;
     Ok(())
 }
 

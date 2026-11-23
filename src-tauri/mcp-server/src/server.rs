@@ -2,18 +2,22 @@ use std::sync::{Arc, Mutex};
 
 use rmcp::{
     handler::server::wrapper::{Json, Parameters},
+    model::{CallToolResult, ContentBlock},
     tool, tool_router,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use std::collections::HashMap;
 
 use crate::{
     AnimationBone, AnimationChannel, AnimationClip, AnimationDocument, AnimationDraftStore,
     AnimationInfo, AnimationKeyframe, AnimationOrigin, AnimationProperty, AnimationRig,
     AnimationValidation, AppPhase, AppSnapshotSource, AuthoringErrorCode, AuthoringOperation,
-    AuthoringRequest, ControlSnapshot, IpcError, LiveRigCatalog, RendererInfo, RigInfo, SceneInfo,
+    AuthoringRequest, ControlSnapshot, IpcError, LiveRigCatalog, PoseImageChunkRequest,
+    PoseObservationOperation, PoseObservationRequest, RendererInfo, RigInfo, SceneInfo,
     SnapshotInfo, ToolEnvelope, ToolError, ValidationState, AUTHORING_BRIDGE_PROTOCOL,
-    MAX_DOCUMENT_BYTES,
+    MAX_DOCUMENT_BYTES, MAX_IMAGE_CHUNK_BYTES, POSE_OBSERVATION_PROTOCOL,
 };
 
 #[derive(Clone)]
@@ -22,6 +26,44 @@ pub struct Mesh2MotionMcp {
     authoring_session_id: String,
     drafts: AnimationDraftStore,
     live_catalog: Arc<Mutex<Option<CachedLiveCatalog>>>,
+    observation_captures: Arc<Mutex<HashMap<String, CachedObservation>>>,
+    expired_observation_ids: Arc<Mutex<std::collections::HashSet<String>>>,
+    next_observation_sequence: Arc<std::sync::atomic::AtomicU64>,
+}
+
+#[derive(Clone)]
+struct CachedObservation {
+    session_id: String,
+    result: Value,
+    expires_at_ms: u64,
+    retained_image_bytes: usize,
+}
+
+#[derive(Clone, Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AnimationObservePoseArgs {
+    pub draft_id: String,
+    pub expected_revision: u64,
+    pub timestamp_seconds: f64,
+    #[serde(default)]
+    pub views: Vec<String>,
+    #[serde(default)]
+    pub focus_bone_id: Option<String>,
+    #[serde(default)]
+    pub width: Option<u32>,
+    #[serde(default)]
+    pub height: Option<u32>,
+    #[serde(default)]
+    pub projection: Option<String>,
+    #[serde(default)]
+    pub image_mime: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AnimationCaptureViewArgs {
+    pub capture_id: String,
+    pub view: String,
 }
 
 #[derive(Clone)]
@@ -44,6 +86,9 @@ impl Mesh2MotionMcp {
             authoring_session_id: format!("mcp-{}-{nonce}", std::process::id()),
             drafts: AnimationDraftStore::default(),
             live_catalog: Arc::new(Mutex::new(None)),
+            observation_captures: Arc::new(Mutex::new(HashMap::new())),
+            expired_observation_ids: Arc::new(Mutex::new(std::collections::HashSet::new())),
+            next_observation_sequence: Arc::new(std::sync::atomic::AtomicU64::new(0)),
         }
     }
 
@@ -143,6 +188,526 @@ impl Mesh2MotionMcp {
             Err(error) => Json(error_envelope(error)),
         }
     }
+
+    async fn observe_pose(&self, args: AnimationObservePoseArgs) -> CallToolResult {
+        let fail = |code: &str, message: &str| {
+            CallToolResult::error(vec![ContentBlock::text(
+                json!({"ok":false,"error":{"code":code,"message":message}}).to_string(),
+            )])
+        };
+        if args.draft_id.is_empty()
+            || args.draft_id.len() > 64
+            || !args.timestamp_seconds.is_finite()
+        {
+            return fail("BAD_REQUEST", "draft_id or timestamp is invalid");
+        }
+        let document = match self.drafts.get(&self.authoring_session_id) {
+            Ok(document) => document,
+            Err(_) => {
+                return fail(
+                    "SESSION_CONFLICT",
+                    "no authorized draft exists for this MCP session",
+                )
+            }
+        };
+        if self.authoring_session_id != args.draft_id {
+            return fail(
+                "SESSION_CONFLICT",
+                "draft_id is not owned by this MCP session",
+            );
+        }
+        if document.revision != args.expected_revision {
+            return fail(
+                "STALE_REVISION",
+                "expected_revision does not match the authoritative draft",
+            );
+        }
+        if args.timestamp_seconds < 0.0 || args.timestamp_seconds > document.clip.duration_seconds {
+            return fail(
+                "BAD_REQUEST",
+                "timestamp_seconds is outside the draft duration",
+            );
+        }
+        let catalog = match self.cached_live_catalog() {
+            Ok(catalog) => catalog,
+            Err(_) => return fail("RIG_UNAVAILABLE", "live rig catalog is unavailable"),
+        };
+        if document.rig.fingerprint != catalog.fingerprint {
+            return fail(
+                "RIG_MISMATCH",
+                "draft rig fingerprint no longer matches the live rig",
+            );
+        }
+        if let Some(bone_id) = args.focus_bone_id.as_ref() {
+            if !catalog.bones.iter().any(|bone| &bone.id == bone_id) {
+                return fail(
+                    "UNSUPPORTED_BONE",
+                    "focus_bone_id is not present in the live rig",
+                );
+            }
+        }
+        let views = if args.views.is_empty() {
+            vec!["front", "right", "top"]
+                .into_iter()
+                .map(str::to_owned)
+                .collect()
+        } else {
+            args.views.clone()
+        };
+        let mut unique_views = std::collections::HashSet::new();
+        if views.is_empty()
+            || views.len() > 6
+            || views.iter().any(|v| {
+                !matches!(
+                    v.as_str(),
+                    "front" | "back" | "left" | "right" | "top" | "bottom"
+                ) || !unique_views.insert(v)
+            })
+        {
+            return fail("BAD_REQUEST", "views must be unique supported camera names");
+        }
+        if args.width.is_some_and(|v| !(64..=1024).contains(&v))
+            || args.height.is_some_and(|v| !(64..=1024).contains(&v))
+        {
+            return fail("BAD_REQUEST", "image dimensions must be 64..1024");
+        }
+        if args
+            .projection
+            .as_deref()
+            .is_some_and(|v| !matches!(v, "orthographic" | "perspective"))
+        {
+            return fail("BAD_REQUEST", "projection is unsupported");
+        }
+        let image_mime = args.image_mime.as_deref().unwrap_or("image/png");
+        if !matches!(image_mime, "image/png" | "image/jpeg") {
+            return fail("BAD_REQUEST", "image MIME type is unsupported");
+        }
+        // Allow the contract maximum per image. Inline bytes are only optional;
+        // the frontend strips them when the complete observation approaches the
+        // 256 KiB response ceiling, leaving image_ref retrieval for MCP clients.
+        let max_image_bytes = if image_mime == "image/png" {
+            1024 * 1024
+        } else {
+            256 * 1024
+        };
+        let payload = json!({
+            "rig_fingerprint": catalog.fingerprint,
+            "draft_id": self.authoring_session_id,
+            "expected_revision": document.revision,
+            "timestamp_seconds": args.timestamp_seconds,
+            "views": views,
+            "focus_bone_id": args.focus_bone_id,
+            "width": args.width.unwrap_or(512),
+            "height": args.height.unwrap_or(512),
+            "projection": args.projection.unwrap_or_else(|| "orthographic".into()),
+            "image": {"mime": image_mime},
+            "include_joints": true,
+            "max_image_bytes": max_image_bytes
+        });
+        let sequence = self
+            .next_observation_sequence
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            .saturating_add(1);
+        let request = PoseObservationRequest {
+            protocol: POSE_OBSERVATION_PROTOCOL.into(),
+            request_id: pose_request_id(&self.authoring_session_id, sequence),
+            session_id: self.authoring_session_id.clone(),
+            sequence,
+            deadline_ms: 30_000,
+            operation: PoseObservationOperation::Capture,
+            payload,
+        };
+        if request.validate().is_err() {
+            return fail(
+                "PAYLOAD_TOO_LARGE",
+                "observation request exceeds the v1 envelope limit",
+            );
+        }
+        let response = match self.source.pose_observation_request(request.clone()).await {
+            Ok(response) if request.validate_response(&response) => response,
+            Ok(_) => {
+                return fail(
+                    "INTERNAL",
+                    "frontend observation response correlation failed",
+                )
+            }
+            Err(error) => {
+                let code = match error {
+                    IpcError::Unavailable | IpcError::AppUnavailable => "RIG_UNAVAILABLE",
+                    IpcError::Disconnected => "RIG_UNAVAILABLE",
+                    IpcError::NotReady => "RIG_UNAVAILABLE",
+                    IpcError::IncompatibleVersion => "BAD_PROTOCOL",
+                    IpcError::PermissionDenied | IpcError::AuthoringDisabled => "SESSION_CONFLICT",
+                    IpcError::DeadlineExceeded => "DEADLINE_EXCEEDED",
+                    IpcError::InvalidResponse => "INTERNAL",
+                };
+                return fail(code, &format!("observation bridge failed: {error:?}"));
+            }
+        };
+        if !response.ok {
+            let error = response.error.unwrap_or(crate::PoseObservationError {
+                code: "INTERNAL".into(),
+                message: "observation failed".into(),
+            });
+            return fail(&error.code, &error.message);
+        }
+        let Some(result) = response.result else {
+            return fail("INTERNAL", "observation response omitted result");
+        };
+        let valid_header = result.get("protocol_version").and_then(Value::as_str)
+            == Some(POSE_OBSERVATION_PROTOCOL)
+            && result.get("draft_id").and_then(Value::as_str)
+                == Some(self.authoring_session_id.as_str())
+            && result.get("revision").and_then(Value::as_u64) == Some(document.revision)
+            && result
+                .get("rig")
+                .and_then(|v| v.get("fingerprint"))
+                .and_then(Value::as_str)
+                == Some(catalog.fingerprint.as_str())
+            && result.get("timestamp_seconds").and_then(Value::as_f64)
+                == Some(args.timestamp_seconds)
+            && result
+                .get("pose_digest")
+                .and_then(Value::as_str)
+                .is_some_and(|digest| {
+                    digest.len() == 64
+                        && digest
+                            .bytes()
+                            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+                })
+            && result
+                .get("width")
+                .and_then(Value::as_u64)
+                .is_some_and(|width| (64..=1024).contains(&width))
+            && result
+                .get("height")
+                .and_then(Value::as_u64)
+                .is_some_and(|height| (64..=1024).contains(&height));
+        if !valid_header {
+            return fail(
+                "INTERNAL",
+                "capture metadata does not match the validated draft and pose",
+            );
+        }
+        let Some(capture_id) = result.get("capture_id").and_then(Value::as_str) else {
+            return fail("INTERNAL", "capture_id missing");
+        };
+        let Some(expires_at_ms) = result.get("expires_at_ms").and_then(Value::as_u64) else {
+            return fail("INTERNAL", "capture expiry missing");
+        };
+        let Some(captured_views) = result.get("views").and_then(Value::as_array) else {
+            return fail("INTERNAL", "captured views missing");
+        };
+        if captured_views.len() != views.len() {
+            return fail("INTERNAL", "renderer returned a partial view set");
+        }
+        let mut returned_views = std::collections::HashSet::new();
+        let mut aggregate_bytes = 0usize;
+        for view in captured_views {
+            let Some(view_name) = view.get("view").and_then(Value::as_str) else {
+                return fail("INTERNAL", "view metadata missing name");
+            };
+            if !views.iter().any(|requested| requested == view_name)
+                || !returned_views.insert(view_name)
+            {
+                return fail("INTERNAL", "renderer returned an unrequested view");
+            }
+            let mime = view.get("mime").and_then(Value::as_str).unwrap_or_default();
+            let bytes = view
+                .get("image_bytes")
+                .and_then(Value::as_u64)
+                .unwrap_or_default() as usize;
+            let limit = if mime == "image/png" {
+                1024 * 1024
+            } else if mime == "image/jpeg" {
+                256 * 1024
+            } else {
+                0
+            };
+            if mime != image_mime
+                || limit == 0
+                || bytes == 0
+                || bytes > limit
+                || view.get("image_ref").and_then(Value::as_str).is_none()
+            {
+                return fail(
+                    "RENDER_FAILED",
+                    "renderer returned invalid image reference metadata",
+                );
+            }
+            if !validate_view_geometry(view, &catalog.bones) {
+                return fail(
+                    "INTERNAL",
+                    "camera or joint geometry does not match the live rig catalog",
+                );
+            }
+            aggregate_bytes = match aggregate_bytes.checked_add(bytes) {
+                Some(total) => total,
+                None => return fail("RESOURCE_LIMIT_EXCEEDED", "image byte sum overflow"),
+            };
+        }
+        if returned_views.len() != views.len() {
+            return fail("INTERNAL", "renderer returned duplicate or missing views");
+        }
+        if aggregate_bytes > 8 * 1024 * 1024 {
+            return fail(
+                "RESOURCE_LIMIT_EXCEEDED",
+                "capture exceeds aggregate image memory limit",
+            );
+        }
+        let now = chrono::Utc::now().timestamp_millis().max(0) as u64;
+        if expires_at_ms <= now || expires_at_ms > now.saturating_add(30_000) {
+            return fail(
+                "CAPTURE_EXPIRED",
+                "capture expiry is invalid or already elapsed",
+            );
+        }
+        if let Ok(mut captures) = self.observation_captures.lock() {
+            let expired = captures
+                .iter()
+                .filter(|(_, capture)| capture.expires_at_ms <= now)
+                .map(|(id, _)| id.clone())
+                .collect::<Vec<_>>();
+            for id in &expired {
+                captures.remove(id);
+            }
+            if let Ok(mut ids) = self.expired_observation_ids.lock() {
+                ids.extend(expired);
+                while ids.len() > 4096 {
+                    if let Some(id) = ids.iter().next().cloned() {
+                        ids.remove(&id);
+                    }
+                }
+                ids.remove(capture_id);
+            }
+            if captures.len() >= 4 {
+                if let Some(oldest) = captures
+                    .iter()
+                    .min_by_key(|(_, capture)| capture.expires_at_ms)
+                    .map(|(id, _)| id.clone())
+                {
+                    captures.remove(&oldest);
+                }
+            }
+            let retained: usize = captures
+                .values()
+                .map(|capture| capture.retained_image_bytes)
+                .sum();
+            if retained.saturating_add(aggregate_bytes) > 8 * 1024 * 1024 {
+                return fail(
+                    "RESOURCE_LIMIT_EXCEEDED",
+                    "retained captures exceed aggregate image memory limit",
+                );
+            }
+            captures.insert(
+                capture_id.to_owned(),
+                CachedObservation {
+                    session_id: self.authoring_session_id.clone(),
+                    result: result.clone(),
+                    expires_at_ms,
+                    retained_image_bytes: aggregate_bytes,
+                },
+            );
+        } else {
+            return fail("INTERNAL", "capture registry is unavailable");
+        }
+        CallToolResult::structured(result)
+    }
+
+    async fn capture_view(&self, args: AnimationCaptureViewArgs) -> CallToolResult {
+        let fail = |code: &str, message: &str| {
+            CallToolResult::error(vec![ContentBlock::text(
+                json!({"ok":false,"error":{"code":code,"message":message}}).to_string(),
+            )])
+        };
+        if !matches!(
+            args.view.as_str(),
+            "front" | "back" | "left" | "right" | "top" | "bottom"
+        ) {
+            return fail("BAD_REQUEST", "unsupported view");
+        }
+        let now = chrono::Utc::now().timestamp_millis().max(0) as u64;
+        let capture = match self.observation_captures.lock() {
+            Ok(mut captures) => {
+                let capture = captures.get(&args.capture_id).cloned();
+                if capture
+                    .as_ref()
+                    .is_some_and(|item| item.expires_at_ms <= now)
+                {
+                    captures.remove(&args.capture_id);
+                    if let Ok(mut ids) = self.expired_observation_ids.lock() {
+                        ids.insert(args.capture_id.clone());
+                    }
+                    None
+                } else {
+                    capture
+                }
+            }
+            Err(_) => return fail("INTERNAL", "capture registry is unavailable"),
+        };
+        let Some(capture) = capture else {
+            let expired = self
+                .expired_observation_ids
+                .lock()
+                .is_ok_and(|ids| ids.contains(&args.capture_id));
+            return if expired {
+                fail("CAPTURE_EXPIRED", "capture ID has expired")
+            } else {
+                fail("CAPTURE_NOT_FOUND", "capture ID is unknown or was evicted")
+            };
+        };
+        if capture.session_id != self.authoring_session_id {
+            return fail(
+                "CAPTURE_NOT_FOUND",
+                "capture is not authorized for this session",
+            );
+        }
+        let Some(views) = capture.result.get("views").and_then(Value::as_array) else {
+            return fail("INTERNAL", "capture view metadata missing");
+        };
+        let Some(view_data) = views
+            .iter()
+            .find(|item| item.get("view").and_then(Value::as_str) == Some(args.view.as_str()))
+        else {
+            return fail(
+                "CAPTURE_NOT_FOUND",
+                "requested view is not retained by this capture",
+            );
+        };
+        let Some(image_ref) = view_data.get("image_ref").and_then(Value::as_str) else {
+            return fail("CAPTURE_NOT_FOUND", "image reference missing");
+        };
+        let Some(mime) = view_data.get("mime").and_then(Value::as_str) else {
+            return fail("INTERNAL", "image MIME missing");
+        };
+        let Some(expected_bytes) = view_data
+            .get("image_bytes")
+            .and_then(Value::as_u64)
+            .map(|n| n as usize)
+        else {
+            return fail("INTERNAL", "image byte count missing");
+        };
+        let Some(capture_id) = capture.result.get("capture_id").and_then(Value::as_str) else {
+            return fail("INTERNAL", "capture ID missing");
+        };
+        let mut image = Vec::with_capacity(expected_bytes);
+        let mut offset = 0usize;
+        let mut request_number = 0u64;
+        while offset < expected_bytes {
+            request_number += 1;
+            let max_bytes = MAX_IMAGE_CHUNK_BYTES.min(expected_bytes - offset);
+            let request = PoseImageChunkRequest {
+                request_id: format!(
+                    "img-{}-{request_number}",
+                    capture_id.chars().take(36).collect::<String>()
+                ),
+                session_id: self.authoring_session_id.clone(),
+                capture_id: capture_id.to_owned(),
+                image_ref: image_ref.to_owned(),
+                view: args.view.clone(),
+                offset,
+                max_bytes,
+            };
+            let chunk = match self.source.pose_image_chunk(request.clone()).await {
+                Ok(chunk) if request.validate_response(&chunk) => chunk,
+                Ok(_) => {
+                    return fail(
+                        "INTERNAL",
+                        "image chunk response failed correlation or size validation",
+                    )
+                }
+                Err(_) => {
+                    return fail(
+                        "CAPTURE_NOT_FOUND",
+                        "image bytes are no longer available from the frontend",
+                    )
+                }
+            };
+            if let Some(error) = chunk.error.as_ref() {
+                return fail(&error.code, &error.message);
+            }
+            if chunk.mime != mime || chunk.total_bytes != expected_bytes {
+                return fail("INTERNAL", "image metadata changed between chunks");
+            }
+            let decoded = match decode_base64(&chunk.bytes_base64) {
+                Some(bytes) => bytes,
+                None => return fail("RENDER_FAILED", "image chunk is invalid base64"),
+            };
+            if decoded.is_empty()
+                || decoded.len() > max_bytes
+                || image.len().saturating_add(decoded.len()) > expected_bytes
+            {
+                return fail(
+                    "PAYLOAD_TOO_LARGE",
+                    "image chunk exceeded its declared bounds",
+                );
+            }
+            offset += decoded.len();
+            image.extend_from_slice(&decoded);
+        }
+        let expected_dimensions = capture
+            .result
+            .get("width")
+            .and_then(Value::as_u64)
+            .zip(capture.result.get("height").and_then(Value::as_u64));
+        if image.len() != expected_bytes
+            || !valid_encoded_image(&image, mime)
+            || encoded_image_dimensions(&image, mime)
+                != expected_dimensions.map(|(width, height)| (width as u32, height as u32))
+        {
+            return fail(
+                "RENDER_FAILED",
+                "image bytes do not match the declared MIME or size",
+            );
+        }
+        let metadata = json!({"capture_id":capture_id,"view":args.view,"mime":mime,"width":capture.result.get("width"),"height":capture.result.get("height"),"rig":capture.result.get("rig"),"draft_id":capture.result.get("draft_id"),"revision":capture.result.get("revision"),"timestamp_seconds":capture.result.get("timestamp_seconds"),"pose_digest":capture.result.get("pose_digest"),"camera":view_data.get("camera"),"joints":view_data.get("joints")});
+        CallToolResult::success(vec![
+            ContentBlock::text(metadata.to_string()),
+            ContentBlock::image(encode_base64(&image), mime),
+        ])
+    }
+
+    pub async fn dispose_observation_captures(&self) {
+        let capture_ids = self
+            .observation_captures
+            .lock()
+            .map(|captures| captures.keys().cloned().collect::<Vec<_>>())
+            .unwrap_or_default();
+        for (index, capture_id) in capture_ids.into_iter().enumerate() {
+            let sequence = self
+                .next_observation_sequence
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+                .saturating_add(1);
+            let request = PoseObservationRequest {
+                protocol: POSE_OBSERVATION_PROTOCOL.into(),
+                request_id: pose_dispose_request_id(&self.authoring_session_id, sequence, index),
+                session_id: self.authoring_session_id.clone(),
+                sequence,
+                deadline_ms: 1_000,
+                operation: PoseObservationOperation::Dispose,
+                payload: json!({"capture_id":capture_id}),
+            };
+            let _ = self.source.pose_observation_request(request).await;
+        }
+        if let Ok(mut captures) = self.observation_captures.lock() {
+            captures.clear();
+        }
+    }
+
+    /// Release the single app-side authoring session when this stdio peer exits.
+    /// A later MCP process receives a new session ID and otherwise cannot replace
+    /// the frontend dispatcher's retained prior session.
+    pub async fn cancel_authoring_session(&self) {
+        let response = self
+            .authoring_call(AuthoringOperation::SessionCancel, serde_json::json!({}))
+            .await;
+        if response.0.ok {
+            let _ = self.drafts.remove(&self.authoring_session_id);
+            if let Ok(mut captures) = self.observation_captures.lock() {
+                captures.clear();
+            }
+        }
+    }
 }
 
 fn authoring_error_code(code: AuthoringErrorCode) -> &'static str {
@@ -167,6 +732,14 @@ fn authoring_error_code(code: AuthoringErrorCode) -> &'static str {
         AuthoringErrorCode::AuthoringDisabled => "AUTHORING_DISABLED",
         AuthoringErrorCode::AppDisconnected => "APP_DISCONNECTED",
     }
+}
+
+fn pose_request_id(session_id: &str, sequence: u64) -> String {
+    format!("pose-{session_id}-{sequence}")
+}
+
+fn pose_dispose_request_id(session_id: &str, sequence: u64, index: usize) -> String {
+    format!("dispose-{session_id}-{sequence}-{index}")
 }
 
 #[cfg(test)]
@@ -248,6 +821,96 @@ impl LiveRigCatalogData {
                 .is_none_or(|parent_id| parent_id != &bone.id && ids.contains(parent_id.as_str()))
         })
     }
+}
+
+fn validate_view_geometry(view: &Value, bones: &[AnimationBone]) -> bool {
+    let Some(camera) = view.get("camera") else {
+        return false;
+    };
+    let valid_vector = |value: Option<&Value>, length: usize| {
+        value.and_then(Value::as_array).is_some_and(|values| {
+            values.len() == length
+                && values
+                    .iter()
+                    .all(|v| v.as_f64().is_some_and(f64::is_finite))
+        })
+    };
+    if !matches!(
+        camera.get("projection").and_then(Value::as_str),
+        Some("orthographic" | "perspective")
+    ) || !valid_vector(camera.get("position"), 3)
+        || !valid_vector(camera.get("target"), 3)
+        || !valid_vector(camera.get("up"), 3)
+        || !valid_vector(camera.get("view_matrix"), 16)
+        || !valid_vector(camera.get("projection_matrix"), 16)
+        || !camera
+            .get("near")
+            .and_then(Value::as_f64)
+            .is_some_and(|v| v.is_finite() && v > 0.0)
+        || !camera
+            .get("far")
+            .and_then(Value::as_f64)
+            .is_some_and(|v| v.is_finite() && v > 0.0)
+    {
+        return false;
+    }
+    let Some(joints) = view.get("joints").and_then(Value::as_array) else {
+        return false;
+    };
+    if joints.len() > bones.len() || joints.len() > crate::MAX_BONES {
+        return false;
+    }
+    let mut seen = std::collections::HashSet::new();
+    joints.iter().all(|joint| {
+        let Some(bone_id) = joint.get("bone_id").and_then(Value::as_str) else {
+            return false;
+        };
+        let Some(bone) = bones.iter().find(|bone| bone.id == bone_id) else {
+            return false;
+        };
+        if !seen.insert(bone_id)
+            || joint.get("parent_id")
+                != Some(&serde_json::to_value(&bone.parent_id).unwrap_or(Value::Null))
+            || !valid_vector(joint.get("world_position"), 3)
+            || !valid_vector(joint.get("local_position"), 3)
+            || !valid_vector(joint.get("local_quaternion"), 4)
+            || !valid_vector(joint.get("local_scale"), 3)
+        {
+            return false;
+        }
+        let Some(rotation) = joint.get("local_quaternion").and_then(Value::as_array) else {
+            return false;
+        };
+        let norm = rotation
+            .iter()
+            .filter_map(Value::as_f64)
+            .map(|v| v * v)
+            .sum::<f64>()
+            .sqrt();
+        let Some(projected) = joint.get("projected") else {
+            return false;
+        };
+        let valid_occlusion = matches!(
+            projected.get("occlusion").and_then(Value::as_str),
+            Some("none" | "self" | "other" | "unknown")
+        );
+        valid_occlusion
+            && (norm - 1.0).abs() <= 1e-4
+            && projected
+                .get("u")
+                .and_then(Value::as_f64)
+                .is_some_and(f64::is_finite)
+            && projected
+                .get("v")
+                .and_then(Value::as_f64)
+                .is_some_and(f64::is_finite)
+            && projected
+                .get("depth")
+                .and_then(Value::as_f64)
+                .is_some_and(f64::is_finite)
+            && projected.get("in_frame").and_then(Value::as_bool).is_some()
+            && projected.get("visible").and_then(Value::as_bool).is_some()
+    })
 }
 
 #[derive(Clone, Debug, serde::Deserialize, JsonSchema, serde::Serialize)]
@@ -804,7 +1467,7 @@ impl Mesh2MotionMcp {
                 None,
             ));
         }
-        let response = self
+        let mut response = self
             .authoring_call(
                 AuthoringOperation::DraftCreate,
                 serde_json::to_value(args).unwrap_or_default(),
@@ -812,6 +1475,13 @@ impl Mesh2MotionMcp {
             .await;
         if !response.0.ok {
             let _ = self.drafts.remove(&self.authoring_session_id);
+        } else if let Some(data) = response.0.data.as_mut() {
+            if let Some(object) = data.as_object_mut() {
+                object.insert(
+                    "draft_id".to_owned(),
+                    Value::String(self.authoring_session_id.clone()),
+                );
+            }
         }
         response
     }
@@ -1174,6 +1844,28 @@ impl Mesh2MotionMcp {
     }
 
     #[tool(
+        name = "animation_observe_pose",
+        description = "Capture one synchronized pose from 1..6 hidden model cameras and return live joint projection metadata. Requires the draft_id returned by animation_create_draft."
+    )]
+    pub async fn animation_observe_pose(
+        &self,
+        Parameters(args): Parameters<AnimationObservePoseArgs>,
+    ) -> CallToolResult {
+        self.observe_pose(args).await
+    }
+
+    #[tool(
+        name = "animation_capture_view",
+        description = "Return an actual retained camera image as MCP image content with matching camera matrices, joint projections, rig fingerprint, revision and timestamp."
+    )]
+    pub async fn animation_capture_view(
+        &self,
+        Parameters(args): Parameters<AnimationCaptureViewArgs>,
+    ) -> CallToolResult {
+        self.capture_view(args).await
+    }
+
+    #[tool(
         name = "animation_session_status",
         description = "Read the current authoring session, live rig fingerprint, preview and permission state."
     )]
@@ -1196,10 +1888,197 @@ impl Mesh2MotionMcp {
         let response = self
             .authoring_call(AuthoringOperation::SessionCancel, serde_json::json!({}))
             .await;
-        if response.0.ok {
-            let _ = self.drafts.remove(&self.authoring_session_id);
-        }
+        self.clear_session_state_if_cancelled(response.0.ok);
         response
+    }
+
+    fn clear_session_state_if_cancelled(&self, cancelled: bool) {
+        if !cancelled {
+            return;
+        }
+        let _ = self.drafts.remove(&self.authoring_session_id);
+        if let Ok(mut captures) = self.observation_captures.lock() {
+            captures.clear();
+        }
+    }
+}
+
+fn encode_base64(bytes: &[u8]) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let a = chunk[0];
+        let b = *chunk.get(1).unwrap_or(&0);
+        let c = *chunk.get(2).unwrap_or(&0);
+        out.push(TABLE[(a >> 2) as usize] as char);
+        out.push(TABLE[(((a & 3) << 4) | (b >> 4)) as usize] as char);
+        out.push(if chunk.len() > 1 {
+            TABLE[(((b & 15) << 2) | (c >> 6)) as usize] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            TABLE[(c & 63) as usize] as char
+        } else {
+            '='
+        });
+    }
+    out
+}
+
+fn decode_base64(input: &str) -> Option<Vec<u8>> {
+    if !input.len().is_multiple_of(4) {
+        return None;
+    }
+    let mut output = Vec::with_capacity(input.len() / 4 * 3);
+    for (index, chunk) in input.as_bytes().chunks(4).enumerate() {
+        let last = index == input.len() / 4 - 1;
+        let value = |byte| match byte {
+            b'A'..=b'Z' => Some(byte - b'A'),
+            b'a'..=b'z' => Some(byte - b'a' + 26),
+            b'0'..=b'9' => Some(byte - b'0' + 52),
+            b'+' => Some(62),
+            b'/' => Some(63),
+            _ => None,
+        };
+        let a = value(chunk[0])?;
+        let b = value(chunk[1])?;
+        output.push((a << 2) | (b >> 4));
+        if chunk[2] == b'=' {
+            if !last || chunk[3] != b'=' || b & 15 != 0 {
+                return None;
+            }
+            continue;
+        }
+        let c = value(chunk[2])?;
+        output.push((b << 4) | (c >> 2));
+        if chunk[3] == b'=' {
+            if !last || c & 3 != 0 {
+                return None;
+            }
+            continue;
+        }
+        let d = value(chunk[3])?;
+        output.push((c << 6) | d);
+    }
+    Some(output)
+}
+
+fn valid_encoded_image(bytes: &[u8], mime: &str) -> bool {
+    match mime {
+        "image/png" => {
+            bytes.starts_with(b"\x89PNG\r\n\x1a\n")
+                && bytes.len() >= 45
+                && bytes.get(12..16) == Some(b"IHDR")
+                && bytes.ends_with(b"\0\0\0\0IEND\xaeB`\x82")
+        }
+        "image/jpeg" => {
+            bytes.starts_with(&[0xff, 0xd8]) && bytes.ends_with(&[0xff, 0xd9]) && bytes.len() >= 4
+        }
+        _ => false,
+    }
+}
+
+fn encoded_image_dimensions(bytes: &[u8], mime: &str) -> Option<(u32, u32)> {
+    match mime {
+        "image/png" if valid_encoded_image(bytes, mime) => {
+            let width = u32::from_be_bytes(bytes.get(16..20)?.try_into().ok()?);
+            let height = u32::from_be_bytes(bytes.get(20..24)?.try_into().ok()?);
+            (width > 0 && height > 0).then_some((width, height))
+        }
+        "image/jpeg" if valid_encoded_image(bytes, mime) => {
+            let mut offset = 2usize;
+            while offset + 4 <= bytes.len() - 2 {
+                if bytes[offset] != 0xff {
+                    return None;
+                }
+                let marker = bytes[offset + 1];
+                offset += 2;
+                if marker == 0xd9 || marker == 0xda {
+                    return None;
+                }
+                if matches!(marker, 0x01 | 0xd0..=0xd7) {
+                    continue;
+                }
+                let segment_len =
+                    u16::from_be_bytes([*bytes.get(offset)?, *bytes.get(offset + 1)?]) as usize;
+                if segment_len < 2 || offset.checked_add(segment_len)? > bytes.len() {
+                    return None;
+                }
+                if matches!(
+                    marker,
+                    0xc0 | 0xc1
+                        | 0xc2
+                        | 0xc3
+                        | 0xc5
+                        | 0xc6
+                        | 0xc7
+                        | 0xc9
+                        | 0xca
+                        | 0xcb
+                        | 0xcd
+                        | 0xce
+                        | 0xcf
+                ) {
+                    if segment_len < 7 {
+                        return None;
+                    }
+                    let height = u16::from_be_bytes([bytes[offset + 3], bytes[offset + 4]]) as u32;
+                    let width = u16::from_be_bytes([bytes[offset + 5], bytes[offset + 6]]) as u32;
+                    return (width > 0 && height > 0).then_some((width, height));
+                }
+                offset += segment_len;
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod image_transport_tests {
+    use super::*;
+
+    #[test]
+    fn base64_transport_round_trips_and_rejects_malformed_padding() {
+        for bytes in [vec![1], vec![1, 2], vec![1, 2, 3], (0..=255).collect()] {
+            assert_eq!(decode_base64(&encode_base64(&bytes)), Some(bytes));
+        }
+        assert_eq!(decode_base64("AQ=Z"), None);
+        assert_eq!(decode_base64("AQ==AAAA"), None);
+        assert_eq!(decode_base64("A==="), None);
+    }
+
+    #[test]
+    fn observation_request_ids_are_unique_across_sidecar_sessions() {
+        let first = pose_request_id("mcp-100-123456", 1);
+        let second = pose_request_id("mcp-101-123456", 1);
+        assert_ne!(first, second);
+        assert!(first.len() <= crate::MAX_POSE_ID_BYTES);
+        assert_ne!(
+            pose_dispose_request_id("mcp-100-123456", 1, 0),
+            pose_dispose_request_id("mcp-101-123456", 1, 0)
+        );
+    }
+
+    #[test]
+    fn image_magic_must_match_the_claimed_mime_type() {
+        let mut png = b"\x89PNG\r\n\x1a\n".to_vec();
+        png.extend_from_slice(&[
+            0, 0, 0, 13, b'I', b'H', b'D', b'R', 0, 0, 2, 0, 0, 0, 2, 0, 8, 6, 0, 0, 0, 0, 0, 0, 0,
+        ]);
+        png.extend_from_slice(b"\0\0\0\0IEND\xaeB`\x82");
+        assert!(valid_encoded_image(&png, "image/png"));
+        assert_eq!(
+            encoded_image_dimensions(&png, "image/png"),
+            Some((512, 512))
+        );
+        assert!(!valid_encoded_image(&png, "image/jpeg"));
+        assert!(valid_encoded_image(
+            &[0xff, 0xd8, 0x01, 0xff, 0xd9],
+            "image/jpeg"
+        ));
+        assert!(!valid_encoded_image(&[0xff, 0xd8, 0x01], "image/jpeg"));
     }
 }
 
