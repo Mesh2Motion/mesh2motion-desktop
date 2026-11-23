@@ -1,0 +1,14 @@
+{
+  "note": "Image review with restored pixel/geometry parity: v1 front/right/top show an upright one-arm wave, but the raised arm is diagonal and the elbow nearly straight, making hand sway hard to see. Raise the left arm closer to vertical, bend the elbow more strongly, tuck the free arm, and increase torso/head sway slightly.",
+  "based_on_images": [
+    "capture-1a20ab940e7-75b3283f-front.png",
+    "capture-1a20ab940e7-75b3283f-right.png"
+  ],
+  "overrides": {
+    "upperarm_l": {"samples": [[0.0, 95.0], [0.25, 95.0], [0.5, 95.0], [0.75, 95.0], [1.0, 95.0], [1.25, 95.0], [1.5, 95.0], [1.75, 95.0], [2.0, 95.0]]},
+    "upperarm_r": {"samples": [[0.0, 80.0], [0.25, 80.0], [0.5, 80.0], [0.75, 80.0], [1.0, 80.0], [1.25, 80.0], [1.5, 80.0], [1.75, 80.0], [2.0, 80.0]]},
+    "lowerarm_l": {"samples": [[0.0, 55.0], [0.25, -55.0], [0.5, 55.0], [0.75, -55.0], [1.0, 55.0], [1.25, -55.0], [1.5, 55.0], [1.75, -55.0], [2.0, 55.0]]},
+    "spine_03": {"samples": [[0.0, 0.0], [0.25, 5.0], [0.5, 0.0], [0.75, -5.0], [1.0, 0.0], [1.25, 5.0], [1.5, 0.0], [1.75, -5.0], [2.0, 0.0]]},
+    "head": {"samples": [[0.0, 0.0], [0.25, 4.0], [0.5, 0.0], [0.75, -4.0], [1.0, 0.0], [1.25, 4.0], [1.5, 0.0], [1.75, -4.0], [2.0, 0.0]]}
+  }
+}

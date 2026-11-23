@@ -1,0 +1,86 @@
+[
+  {
+    "tag": "v1",
+    "time": 0.25,
+    "capture_id": "capture-1a20abb415e-e9aeb9f1",
+    "pose_digest": "5d4cdd5a7d23f4a6883d671f673b001bf0d30bee52cef055b83955277ac7695d",
+    "rig_fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+    "revision": 7,
+    "images": [
+      {
+        "view": "front",
+        "bytes": 30174,
+        "sha256": "3ba2351ccf66d7025d8f2303866594bdb257b493a4ed92e9fbc3bab7af84a13d",
+        "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb415e-e9aeb9f1-front.png"
+      },
+      {
+        "view": "right",
+        "bytes": 25770,
+        "sha256": "b67d98f3c0103d5f1056923adcd2adde56bb7d9592c2aa42bc3d986545c4bd83",
+        "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb415e-e9aeb9f1-right.png"
+      },
+      {
+        "view": "top",
+        "bytes": 18368,
+        "sha256": "f707b3819e0a4c1d05b4eeed5cc044c0c664846ea708e806c1d4d0e2c9f16c0f",
+        "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb415e-e9aeb9f1-top.png"
+      }
+    ]
+  },
+  {
+    "tag": "v1",
+    "time": 0.75,
+    "capture_id": "capture-1a20abb49c0-3a4e7e5e",
+    "pose_digest": "7a659a3151735629c08542831ed3347d10eae5d1c589063cb83be32959c28167",
+    "rig_fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+    "revision": 7,
+    "images": [
+      {
+        "view": "front",
+        "bytes": 29618,
+        "sha256": "0602861a7b81a426f7f8ef21e457ca838da22a8788b7085c5706799f9672f8ef",
+        "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb49c0-3a4e7e5e-front.png"
+      },
+      {
+        "view": "right",
+        "bytes": 25375,
+        "sha256": "178403d5cbc4f9ebfeda5258d2775c53a68a6e4f9e1cb4d12692490e7349b7d1",
+        "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb49c0-3a4e7e5e-right.png"
+      },
+      {
+        "view": "top",
+        "bytes": 18363,
+        "sha256": "74bfd1586abd3ee91e6713d98801867c48550e9de805a2f9b9e838f9ac6b81c4",
+        "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb49c0-3a4e7e5e-top.png"
+      }
+    ]
+  },
+  {
+    "tag": "v1",
+    "time": 1.25,
+    "capture_id": "capture-1a20abb5226-8d0594b9",
+    "pose_digest": "5d4cdd5a7d23f4a6883d671f673b001bf0d30bee52cef055b83955277ac7695d",
+    "rig_fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+    "revision": 7,
+    "images": [
+      {
+        "view": "front",
+        "bytes": 30174,
+        "sha256": "3ba2351ccf66d7025d8f2303866594bdb257b493a4ed92e9fbc3bab7af84a13d",
+        "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb5226-8d0594b9-front.png"
+      },
+      {
+        "view": "right",
+        "bytes": 25770,
+        "sha256": "b67d98f3c0103d5f1056923adcd2adde56bb7d9592c2aa42bc3d986545c4bd83",
+        "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb5226-8d0594b9-right.png"
+      },
+      {
+        "view": "top",
+        "bytes": 18368,
+        "sha256": "f707b3819e0a4c1d05b4eeed5cc044c0c664846ea708e806c1d4d0e2c9f16c0f",
+        "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb5226-8d0594b9-top.png"
+      }
+    ]
+  }
+]
