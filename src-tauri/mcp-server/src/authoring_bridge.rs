@@ -83,8 +83,6 @@ pub enum AuthoringErrorCode {
     CommitFailed,
     UndoFailed,
     Internal,
-    AuthoringDisabled,
-    AppDisconnected,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

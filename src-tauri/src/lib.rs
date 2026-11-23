@@ -146,6 +146,7 @@ struct McpHostState {
 struct AuthoringBridgeState {
     app: AppHandle,
     enabled: AtomicBool,
+    frontend_ready: AtomicBool,
     pending: Mutex<HashMap<String, PendingAuthoring>>,
 }
 
@@ -172,6 +173,7 @@ impl AuthoringBridgeState {
         Self {
             app,
             enabled: AtomicBool::new(false),
+            frontend_ready: AtomicBool::new(false),
             pending: Mutex::new(HashMap::new()),
         }
     }
@@ -254,7 +256,7 @@ fn make_authoring_handler(state: &Arc<AuthoringBridgeState>) -> AuthoringHandler
         let Some(state) = state.upgrade() else {
             return Box::pin(async move {
                 request.error_response(request.error(
-                    AuthoringErrorCode::AppDisconnected,
+                    AuthoringErrorCode::Internal,
                     "native application is shutting down",
                 ))
             });
@@ -262,8 +264,16 @@ fn make_authoring_handler(state: &Arc<AuthoringBridgeState>) -> AuthoringHandler
         if !state.is_enabled() && request.operation != AuthoringOperation::RigCatalogGet {
             return Box::pin(async move {
                 request.error_response(request.error(
-                    AuthoringErrorCode::AuthoringDisabled,
+                    AuthoringErrorCode::BadRequest,
                     "authoring requires explicit native opt-in",
+                ))
+            });
+        }
+        if !state.frontend_ready.load(Ordering::Acquire) {
+            return Box::pin(async move {
+                request.error_response(request.error(
+                    AuthoringErrorCode::RigUnavailable,
+                    "frontend authoring event listener is not ready",
                 ))
             });
         }
@@ -302,11 +312,15 @@ fn make_authoring_handler(state: &Arc<AuthoringBridgeState>) -> AuthoringHandler
             }
             return Box::pin(async move {
                 request.error_response(request.error(
-                    AuthoringErrorCode::AppDisconnected,
+                    AuthoringErrorCode::Internal,
                     "frontend bridge is unavailable",
                 ))
             });
         }
+        eprintln!(
+            "M2M_AUTHORING request_emitted request_id={} operation={:?}",
+            request.request_id, request.operation
+        );
 
         let deadline = Instant::now() + Duration::from_millis(u64::from(request.deadline_ms));
         let wait_state = Arc::new(Mutex::new(BridgeWaitState {
@@ -617,6 +631,7 @@ fn mcp_authoring_respond(
         || response.session_id != entry.session_id
         || response.sequence != entry.sequence
     {
+        eprintln!("M2M_AUTHORING response_rejected reason=correlation");
         return Err("AUTHORING_RESPONSE_MISMATCH".to_owned());
     }
     if !state.authoring.is_enabled() && entry.operation != AuthoringOperation::RigCatalogGet {
@@ -625,7 +640,9 @@ fn mcp_authoring_respond(
     entry
         .sender
         .try_send(response)
-        .map_err(|_| "AUTHORING_RESPONSE_REJECTED".to_owned())
+        .map_err(|_| "AUTHORING_RESPONSE_REJECTED".to_owned())?;
+    eprintln!("M2M_AUTHORING response_accepted");
+    Ok(())
 }
 
 /// Called only from a native UI control after explicit user action. Each app
@@ -638,6 +655,42 @@ fn mcp_authoring_set_enabled(enabled: bool, state: State<'_, McpHostState>) -> R
     } else {
         state.authoring.disable();
     }
+    Ok(())
+}
+
+/// Frontend event-listener readiness; this does not grant authoring permission.
+#[cfg(feature = "mcp-host")]
+#[tauri::command]
+fn mcp_authoring_frontend_set_ready(
+    ready: bool,
+    state: State<'_, McpHostState>,
+) -> Result<(), String> {
+    state
+        .authoring
+        .frontend_ready
+        .store(ready, Ordering::Release);
+    eprintln!("M2M_AUTHORING frontend_ready={ready}");
+    Ok(())
+}
+
+#[cfg(feature = "mcp-host")]
+#[tauri::command]
+fn mcp_authoring_frontend_stage(stage: String, detail: Option<String>) -> Result<(), String> {
+    if !matches!(
+        stage.as_str(),
+        "listener_start" | "request_listener_ok" | "cancel_listener_ok" | "ready_failed"
+    ) {
+        return Err("AUTHORING_STAGE_INVALID".to_owned());
+    }
+    let detail = detail
+        .unwrap_or_default()
+        .chars()
+        .filter(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, ' ' | '_' | '-' | ':' | '.')
+        })
+        .take(160)
+        .collect::<String>();
+    eprintln!("M2M_AUTHORING frontend_stage={stage} detail={detail}");
     Ok(())
 }
 
@@ -865,7 +918,11 @@ pub fn run() {
             #[cfg(feature = "mcp-host")]
             mcp_authoring_respond,
             #[cfg(feature = "mcp-host")]
-            mcp_authoring_set_enabled
+            mcp_authoring_set_enabled,
+            #[cfg(feature = "mcp-host")]
+            mcp_authoring_frontend_set_ready,
+            #[cfg(feature = "mcp-host")]
+            mcp_authoring_frontend_stage
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

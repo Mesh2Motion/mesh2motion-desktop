@@ -421,7 +421,7 @@ async fn serve_client(
                     IpcResponse::authoring(
                         request.request_id,
                         bridge_request.error_response(bridge_request.error(
-                            AuthoringErrorCode::AuthoringDisabled,
+                            AuthoringErrorCode::BadRequest,
                             "native authoring bridge is disabled",
                         )),
                     )
@@ -707,10 +707,7 @@ mod tests {
             .authoring_request(sample_authoring_request())
             .await
             .unwrap();
-        assert_eq!(
-            response.error.unwrap().code,
-            AuthoringErrorCode::AuthoringDisabled
-        );
+        assert_eq!(response.error.unwrap().code, AuthoringErrorCode::BadRequest);
         drop(host);
         let _ = fs::remove_dir_all(path);
     }

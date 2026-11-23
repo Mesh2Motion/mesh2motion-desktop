@@ -1,26 +1,99 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use rmcp::{
     handler::server::wrapper::{Json, Parameters},
     tool, tool_router,
 };
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
-    AnimationInfo, AnimationOrigin, AppPhase, AppSnapshotSource, AuthoringOperation,
-    AuthoringRequest, ControlSnapshot, IpcError, RendererInfo, RigInfo, SceneInfo, SnapshotInfo,
-    ToolEnvelope, ToolError, AUTHORING_BRIDGE_PROTOCOL,
+    AnimationBone, AnimationChannel, AnimationClip, AnimationDocument, AnimationDraftStore,
+    AnimationInfo, AnimationKeyframe, AnimationOrigin, AnimationProperty, AnimationRig,
+    AnimationValidation, AppPhase, AppSnapshotSource, AuthoringErrorCode, AuthoringOperation,
+    AuthoringRequest, ControlSnapshot, IpcError, LiveRigCatalog, RendererInfo, RigInfo, SceneInfo,
+    SnapshotInfo, ToolEnvelope, ToolError, ValidationState, AUTHORING_BRIDGE_PROTOCOL,
+    MAX_DOCUMENT_BYTES,
 };
 
 #[derive(Clone)]
 pub struct Mesh2MotionMcp {
     source: Arc<dyn AppSnapshotSource>,
+    authoring_session_id: String,
+    drafts: AnimationDraftStore,
+    live_catalog: Arc<Mutex<Option<CachedLiveCatalog>>>,
 }
+
+#[derive(Clone)]
+struct CachedLiveCatalog {
+    identifier: String,
+    fingerprint: String,
+    bones: Vec<AnimationBone>,
+}
+
+type LocalToolError = Box<Json<ToolEnvelope<serde_json::Value>>>;
 
 impl Mesh2MotionMcp {
     pub fn new(source: Arc<dyn AppSnapshotSource>) -> Self {
-        Self { source }
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        Self {
+            source,
+            authoring_session_id: format!("mcp-{}-{nonce}", std::process::id()),
+            drafts: AnimationDraftStore::default(),
+            live_catalog: Arc::new(Mutex::new(None)),
+        }
+    }
+
+    fn cached_live_catalog(&self) -> Result<CachedLiveCatalog, LocalToolError> {
+        self.live_catalog
+            .lock()
+            .map_err(|_| {
+                Box::new(Json(ToolEnvelope::failure(
+                    "INTERNAL",
+                    "live rig catalog is unavailable",
+                    false,
+                    None,
+                )))
+            })?
+            .clone()
+            .ok_or_else(|| {
+                Box::new(Json(ToolEnvelope::failure(
+                    "RIG_UNAVAILABLE",
+                    "read the live skeleton catalog before authoring",
+                    true,
+                    None,
+                )))
+            })
+    }
+
+    fn document_for_validation(
+        &self,
+        candidate: Option<AnimationDocument>,
+    ) -> Result<(CachedLiveCatalog, AnimationDocument), LocalToolError> {
+        let catalog = self.cached_live_catalog()?;
+        let document = match candidate {
+            Some(document) => document,
+            None => self.drafts.get(&self.authoring_session_id).map_err(|_| {
+                Box::new(Json(ToolEnvelope::failure(
+                    "INVALID_DOCUMENT",
+                    "create or import a draft before this operation",
+                    false,
+                    None,
+                )))
+            })?,
+        };
+        if let Err(errors) = document.validate(&catalog.fingerprint, &catalog.bones) {
+            return Err(Box::new(Json(ToolEnvelope::failure(
+                "INVALID_DOCUMENT",
+                &errors.join("; "),
+                false,
+                None,
+            ))));
+        }
+        Ok((catalog, document))
     }
 
     async fn read_snapshot(&self, tool: &'static str) -> Result<ControlSnapshot, IpcError> {
@@ -38,39 +111,64 @@ impl Mesh2MotionMcp {
         result
     }
 
-    async fn read_live_catalog(&self) -> Result<serde_json::Value, IpcError> {
-        let session_id = format!(
-            "catalog-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_nanos()
-        );
+    async fn authoring_call(
+        &self,
+        operation: AuthoringOperation,
+        payload: serde_json::Value,
+    ) -> Json<ToolEnvelope<serde_json::Value>> {
         let request = AuthoringRequest {
             protocol: AUTHORING_BRIDGE_PROTOCOL.to_owned(),
-            request_id: "catalog-request".to_owned(),
-            session_id,
+            request_id: "mcp-request".to_owned(),
+            session_id: self.authoring_session_id.clone(),
             sequence: 1,
-            deadline_ms: 5_000,
-            operation: AuthoringOperation::RigCatalogGet,
-            payload: serde_json::json!({}),
+            deadline_ms: 30_000,
+            operation,
+            payload,
         };
-        let response = self.source.authoring_request(request).await?;
-        if response.ok {
-            response.result.ok_or(IpcError::InvalidResponse)
-        } else {
-            match response.error.map(|error| error.code) {
-                Some(crate::AuthoringErrorCode::AuthoringDisabled) => {
-                    Err(IpcError::AuthoringDisabled)
-                }
-                Some(crate::AuthoringErrorCode::DeadlineExceeded) => {
-                    Err(IpcError::DeadlineExceeded)
-                }
-                Some(crate::AuthoringErrorCode::AppDisconnected) => Err(IpcError::Disconnected),
-                _ => Err(IpcError::InvalidResponse),
+        match self.source.authoring_request(request).await {
+            Ok(response) if response.ok && response.result.is_some() => Json(ToolEnvelope {
+                ok: true,
+                data: response.result,
+                error: None,
+                meta: None,
+            }),
+            Ok(response) if !response.ok => {
+                let (code, message) = response
+                    .error
+                    .map(|error| (authoring_error_code(error.code), error.message))
+                    .unwrap_or(("INTERNAL", "native authoring request failed".to_owned()));
+                let code = if code == "BAD_REQUEST" && message.contains("authoring") {
+                    "AUTHORING_DISABLED"
+                } else {
+                    code
+                };
+                Json(ToolEnvelope::failure(code, &message, false, None))
             }
+            Ok(_) => Json(ToolEnvelope::ipc_error()),
+            Err(error) => Json(error_envelope(error)),
         }
+    }
+}
+
+fn authoring_error_code(code: AuthoringErrorCode) -> &'static str {
+    match code {
+        AuthoringErrorCode::BadProtocol => "BAD_PROTOCOL",
+        AuthoringErrorCode::UnknownOperation => "UNKNOWN_OPERATION",
+        AuthoringErrorCode::BadRequest => "BAD_REQUEST",
+        AuthoringErrorCode::PayloadTooLarge => "PAYLOAD_TOO_LARGE",
+        AuthoringErrorCode::DeadlineExceeded => "DEADLINE_EXCEEDED",
+        AuthoringErrorCode::DuplicateRequestId => "DUPLICATE_REQUEST_ID",
+        AuthoringErrorCode::SessionConflict => "SESSION_CONFLICT",
+        AuthoringErrorCode::RigUnavailable => "RIG_UNAVAILABLE",
+        AuthoringErrorCode::RigMismatch => "RIG_MISMATCH",
+        AuthoringErrorCode::InvalidDocument => "INVALID_DOCUMENT",
+        AuthoringErrorCode::PreviewActive => "PREVIEW_ACTIVE",
+        AuthoringErrorCode::ConfirmationRequired => "CONFIRMATION_REQUIRED",
+        AuthoringErrorCode::ConfirmationDenied => "CONFIRMATION_DENIED",
+        AuthoringErrorCode::ConfirmationExpired => "CONFIRMATION_EXPIRED",
+        AuthoringErrorCode::CommitFailed => "COMMIT_FAILED",
+        AuthoringErrorCode::UndoFailed => "UNDO_FAILED",
+        AuthoringErrorCode::Internal => "INTERNAL",
     }
 }
 
@@ -180,6 +278,71 @@ pub struct LiveBoneData {
     pub local_quaternion: [f64; 4],
     pub local_scale: [f64; 3],
 }
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct CreateDraftArgs {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub duration_seconds: Option<f64>,
+    #[serde(default)]
+    pub document: Option<AnimationDocument>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SetBoneKeyframesArgs {
+    pub expected_revision: u64,
+    pub bone_id: String,
+    pub property: AnimationProperty,
+    pub keyframes: Vec<AnimationKeyframe>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ValidateDraftArgs {
+    #[serde(default)]
+    pub document: Option<AnimationDocument>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub struct PreviewDraftArgs {
+    pub action: PreviewAction,
+    #[serde(default)]
+    pub document: Option<AnimationDocument>,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum PreviewAction {
+    Start,
+    Stop,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct CommitDraftArgs {
+    #[serde(default)]
+    pub document: Option<AnimationDocument>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UndoCommitArgs {
+    pub target_revision: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ImportDraftArgs {
+    pub document: AnimationDocument,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct EmptyArgs {}
 
 #[derive(Clone, Debug, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -519,28 +682,527 @@ impl Mesh2MotionMcp {
         &self,
         Parameters(_args): Parameters<RendererStateArgs>,
     ) -> Json<ToolEnvelope<LiveRigCatalogData>> {
-        match self.read_live_catalog().await {
-            Ok(value) => match serde_json::from_value::<LiveRigCatalogData>(value) {
-                Ok(data) if data.is_well_formed() => Json(ToolEnvelope {
+        let response = self
+            .authoring_call(AuthoringOperation::RigCatalogGet, serde_json::json!({}))
+            .await
+            .0;
+        if !response.ok {
+            return Json(ToolEnvelope {
+                ok: false,
+                data: None,
+                error: response.error,
+                meta: None,
+            });
+        }
+        match response
+            .data
+            .and_then(|value| serde_json::from_value::<LiveRigCatalogData>(value).ok())
+        {
+            Some(data) if data.is_well_formed() => {
+                let cached = CachedLiveCatalog {
+                    identifier: data.rig.identifier.clone(),
+                    fingerprint: data.rig.fingerprint.clone(),
+                    bones: data
+                        .bones
+                        .iter()
+                        .map(|bone| AnimationBone {
+                            id: bone.id.clone(),
+                            display_name: bone.display_name.clone(),
+                            index: bone.index,
+                            parent_id: bone.parent_id.clone(),
+                        })
+                        .collect(),
+                };
+                if let Ok(mut catalog) = self.live_catalog.lock() {
+                    *catalog = Some(cached);
+                }
+                Json(ToolEnvelope {
                     ok: true,
                     data: Some(data),
                     error: None,
                     meta: None,
+                })
+            }
+            _ => Json(ToolEnvelope {
+                ok: false,
+                data: None,
+                error: Some(ToolError {
+                    code: "INVALID_LIVE_CATALOG".to_owned(),
+                    message: "The native application returned an invalid live rig catalog."
+                        .to_owned(),
+                    retryable: false,
                 }),
-                _ => Json(ToolEnvelope {
-                    ok: false,
-                    data: None,
-                    error: Some(ToolError {
-                        code: "INVALID_LIVE_CATALOG".to_owned(),
-                        message: "The native application returned an invalid live rig catalog."
-                            .to_owned(),
-                        retryable: false,
-                    }),
-                    meta: None,
-                }),
-            },
-            Err(error) => Json(error_envelope(error)),
+                meta: None,
+            }),
         }
+    }
+
+    #[tool(
+        name = "animation_create_draft",
+        description = "Create an empty draft for the current live rig; requires native authoring opt-in."
+    )]
+    pub async fn animation_create_draft(
+        &self,
+        Parameters(args): Parameters<CreateDraftArgs>,
+    ) -> Json<ToolEnvelope<serde_json::Value>> {
+        let catalog = match self.cached_live_catalog() {
+            Ok(catalog) => catalog,
+            Err(error) => return *error,
+        };
+        let document = args.document.clone().unwrap_or_else(|| AnimationDocument {
+            schema_version: crate::ANIMATION_DOCUMENT_SCHEMA.to_owned(),
+            rig: AnimationRig {
+                identifier: catalog.identifier.clone(),
+                fingerprint: catalog.fingerprint.clone(),
+            },
+            bones: catalog.bones.clone(),
+            clip: AnimationClip {
+                name: args
+                    .name
+                    .clone()
+                    .unwrap_or_else(|| "Untitled Authored Clip".to_owned()),
+                duration_seconds: args.duration_seconds.unwrap_or(2.0),
+            },
+            channels: Vec::new(),
+            revision: 1,
+            validation: AnimationValidation {
+                state: ValidationState::Draft,
+                errors: Vec::new(),
+            },
+        });
+        if let Err(errors) = document.validate(&catalog.fingerprint, &catalog.bones) {
+            return Json(ToolEnvelope::failure(
+                "INVALID_DOCUMENT",
+                &errors.join("; "),
+                false,
+                None,
+            ));
+        }
+        if serde_json::to_vec(&document).map_or(true, |bytes| bytes.len() > MAX_DOCUMENT_BYTES) {
+            return Json(ToolEnvelope::failure(
+                "PAYLOAD_TOO_LARGE",
+                "AnimationDocument exceeds the 256 KiB document ceiling",
+                false,
+                None,
+            ));
+        }
+        if self.drafts.get(&self.authoring_session_id).is_ok() {
+            return Json(ToolEnvelope::failure(
+                "SESSION_CONFLICT",
+                "an authoring draft already exists for this session",
+                false,
+                None,
+            ));
+        }
+        if let Err(error) = self.drafts.create(
+            &self.authoring_session_id,
+            document,
+            &catalog.fingerprint,
+            &catalog.bones,
+        ) {
+            return Json(ToolEnvelope::failure(
+                "INVALID_DOCUMENT",
+                &format!("draft creation failed: {error:?}"),
+                false,
+                None,
+            ));
+        }
+        let response = self
+            .authoring_call(
+                AuthoringOperation::DraftCreate,
+                serde_json::to_value(args).unwrap_or_default(),
+            )
+            .await;
+        if !response.0.ok {
+            let _ = self.drafts.remove(&self.authoring_session_id);
+        }
+        response
+    }
+
+    #[tool(
+        name = "animation_set_bone_keyframes",
+        description = "Atomically replace one live-rig bone channel at an expected draft revision."
+    )]
+    pub async fn animation_set_bone_keyframes(
+        &self,
+        Parameters(args): Parameters<SetBoneKeyframesArgs>,
+    ) -> Json<ToolEnvelope<serde_json::Value>> {
+        let catalog = match self.cached_live_catalog() {
+            Ok(catalog) => catalog,
+            Err(error) => return *error,
+        };
+        let current = match self.drafts.get(&self.authoring_session_id) {
+            Ok(document) => document,
+            Err(_) => {
+                return Json(ToolEnvelope::failure(
+                    "INVALID_DOCUMENT",
+                    "create or import a draft before setting keyframes",
+                    false,
+                    None,
+                ));
+            }
+        };
+        if current.revision != args.expected_revision {
+            return Json(ToolEnvelope::failure(
+                "BAD_REQUEST",
+                "stale expected_revision",
+                false,
+                None,
+            ));
+        }
+        let mut candidate = current.clone();
+        let replacement = AnimationChannel {
+            bone_id: args.bone_id.clone(),
+            property: args.property,
+            keyframes: args.keyframes.clone(),
+        };
+        if let Some(channel) = candidate
+            .channels
+            .iter_mut()
+            .find(|channel| channel.bone_id == args.bone_id && channel.property == args.property)
+        {
+            channel.keyframes = args.keyframes.clone();
+        } else {
+            candidate.channels.push(replacement.clone());
+        }
+        let Some(next_revision) = args.expected_revision.checked_add(1) else {
+            return Json(ToolEnvelope::failure(
+                "BAD_REQUEST",
+                "draft revision overflow",
+                false,
+                None,
+            ));
+        };
+        candidate.revision = next_revision;
+        if let Err(errors) = candidate.validate(&catalog.fingerprint, &catalog.bones) {
+            return Json(ToolEnvelope::failure(
+                "INVALID_DOCUMENT",
+                &errors.join("; "),
+                false,
+                None,
+            ));
+        }
+        if serde_json::to_vec(&candidate).map_or(true, |bytes| bytes.len() > MAX_DOCUMENT_BYTES) {
+            return Json(ToolEnvelope::failure(
+                "PAYLOAD_TOO_LARGE",
+                "AnimationDocument exceeds the 256 KiB document ceiling",
+                false,
+                None,
+            ));
+        }
+        let response = self
+            .authoring_call(
+                AuthoringOperation::DraftSetKeyframes,
+                serde_json::to_value(&args).unwrap_or_default(),
+            )
+            .await;
+        if response.0.ok {
+            let current = self.drafts.get(&self.authoring_session_id);
+            if current.is_ok_and(|document| document.revision == args.expected_revision)
+                && self
+                    .drafts
+                    .set_bone_keyframes(
+                        &self.authoring_session_id,
+                        args.expected_revision,
+                        replacement,
+                        LiveRigCatalog {
+                            fingerprint: &catalog.fingerprint,
+                            bones: &catalog.bones,
+                        },
+                    )
+                    .is_err()
+            {
+                return Json(ToolEnvelope::failure(
+                    "INTERNAL",
+                    "frontend accepted keyframes but Rust draft revision could not commit",
+                    false,
+                    None,
+                ));
+            }
+        }
+        response
+    }
+
+    #[tool(
+        name = "animation_validate_draft",
+        description = "Validate the current draft against the live rig and AnimationDocument v1 rules."
+    )]
+    pub async fn animation_validate_draft(
+        &self,
+        Parameters(args): Parameters<ValidateDraftArgs>,
+    ) -> Json<ToolEnvelope<serde_json::Value>> {
+        if let Err(error) = self.document_for_validation(args.document.clone()) {
+            return *error;
+        }
+        self.authoring_call(
+            AuthoringOperation::DraftValidate,
+            serde_json::to_value(args).unwrap_or_default(),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "animation_preview_draft",
+        description = "Start or stop the native viewport preview for the current draft."
+    )]
+    pub async fn animation_preview_draft(
+        &self,
+        Parameters(args): Parameters<PreviewDraftArgs>,
+    ) -> Json<ToolEnvelope<serde_json::Value>> {
+        let operation = match args.action {
+            PreviewAction::Start => AuthoringOperation::DraftPreviewStart,
+            PreviewAction::Stop => AuthoringOperation::DraftPreviewStop,
+        };
+        if matches!(args.action, PreviewAction::Start) {
+            if let Err(error) = self.document_for_validation(args.document.clone()) {
+                return *error;
+            }
+        }
+        self.authoring_call(operation, serde_json::to_value(args).unwrap_or_default())
+            .await
+    }
+
+    #[tool(
+        name = "animation_commit_draft",
+        description = "Commit a draft to the native animation library after digest-bound user approval."
+    )]
+    pub async fn animation_commit_draft(
+        &self,
+        Parameters(args): Parameters<CommitDraftArgs>,
+    ) -> Json<ToolEnvelope<serde_json::Value>> {
+        let (catalog, mut document) = match self.document_for_validation(args.document.clone()) {
+            Ok(value) => value,
+            Err(error) => return *error,
+        };
+        let current = match self.drafts.get(&self.authoring_session_id) {
+            Ok(document) => document,
+            Err(_) => {
+                return Json(ToolEnvelope::failure(
+                    "INVALID_DOCUMENT",
+                    "create or import a draft before committing",
+                    false,
+                    None,
+                ));
+            }
+        };
+        if document.revision != current.revision {
+            return Json(ToolEnvelope::failure(
+                "BAD_REQUEST",
+                "commit document revision does not match the Rust draft revision",
+                false,
+                None,
+            ));
+        }
+        let Some(next_revision) = current.revision.checked_add(1) else {
+            return Json(ToolEnvelope::failure(
+                "BAD_REQUEST",
+                "draft revision overflow",
+                false,
+                None,
+            ));
+        };
+        document.revision = next_revision;
+        let response = self
+            .authoring_call(
+                AuthoringOperation::DraftCommit,
+                serde_json::to_value(args).unwrap_or_default(),
+            )
+            .await;
+        if response.0.ok
+            && self
+                .drafts
+                .commit(
+                    &self.authoring_session_id,
+                    current.revision,
+                    document,
+                    &catalog.fingerprint,
+                    &catalog.bones,
+                )
+                .is_err()
+        {
+            return Json(ToolEnvelope::failure(
+                "INTERNAL",
+                "frontend committed the clip but Rust draft history could not advance",
+                false,
+                None,
+            ));
+        }
+        response
+    }
+
+    #[tool(
+        name = "animation_cancel_draft",
+        description = "Cancel and discard the current native animation draft."
+    )]
+    pub async fn animation_cancel_draft(
+        &self,
+        Parameters(_args): Parameters<EmptyArgs>,
+    ) -> Json<ToolEnvelope<serde_json::Value>> {
+        let response = self
+            .authoring_call(AuthoringOperation::DraftCancel, serde_json::json!({}))
+            .await;
+        if response.0.ok {
+            let _ = self.drafts.remove(&self.authoring_session_id);
+        }
+        response
+    }
+
+    #[tool(
+        name = "animation_undo_commit",
+        description = "Undo an authored animation revision after digest-bound native user approval."
+    )]
+    pub async fn animation_undo_commit(
+        &self,
+        Parameters(args): Parameters<UndoCommitArgs>,
+    ) -> Json<ToolEnvelope<serde_json::Value>> {
+        let (catalog, current) = match self.document_for_validation(None) {
+            Ok(value) => value,
+            Err(error) => return *error,
+        };
+        if current.revision == 0 || args.target_revision >= current.revision {
+            return Json(ToolEnvelope::failure(
+                "BAD_REQUEST",
+                "target_revision must identify an earlier retained revision",
+                false,
+                None,
+            ));
+        }
+        let target_revision = args.target_revision;
+        let response = self
+            .authoring_call(
+                AuthoringOperation::DraftUndo,
+                serde_json::to_value(args).unwrap_or_default(),
+            )
+            .await;
+        if response.0.ok
+            && self
+                .drafts
+                .undo(
+                    &self.authoring_session_id,
+                    current.revision,
+                    target_revision,
+                    &catalog.fingerprint,
+                    &catalog.bones,
+                )
+                .is_err()
+        {
+            return Json(ToolEnvelope::failure(
+                "INTERNAL",
+                "frontend committed undo but Rust draft history could not restore the revision",
+                false,
+                None,
+            ));
+        }
+        response
+    }
+
+    #[tool(
+        name = "animation_export_draft",
+        description = "Export the current authored draft as AnimationDocument v1."
+    )]
+    pub async fn animation_export_draft(
+        &self,
+        Parameters(_args): Parameters<EmptyArgs>,
+    ) -> Json<ToolEnvelope<serde_json::Value>> {
+        self.authoring_call(AuthoringOperation::DraftExport, serde_json::json!({}))
+            .await
+    }
+
+    #[tool(
+        name = "animation_import_draft",
+        description = "Import and validate an AnimationDocument v1 draft for the current live rig."
+    )]
+    pub async fn animation_import_draft(
+        &self,
+        Parameters(args): Parameters<ImportDraftArgs>,
+    ) -> Json<ToolEnvelope<serde_json::Value>> {
+        let catalog = match self.cached_live_catalog() {
+            Ok(catalog) => catalog,
+            Err(error) => return *error,
+        };
+        if let Err(errors) = args.document.validate(&catalog.fingerprint, &catalog.bones) {
+            return Json(ToolEnvelope::failure(
+                "INVALID_DOCUMENT",
+                &errors.join("; "),
+                false,
+                None,
+            ));
+        }
+        if serde_json::to_vec(&args.document).map_or(true, |bytes| bytes.len() > MAX_DOCUMENT_BYTES)
+        {
+            return Json(ToolEnvelope::failure(
+                "PAYLOAD_TOO_LARGE",
+                "AnimationDocument exceeds the 256 KiB document ceiling",
+                false,
+                None,
+            ));
+        }
+        if self.drafts.get(&self.authoring_session_id).is_ok() {
+            return Json(ToolEnvelope::failure(
+                "SESSION_CONFLICT",
+                "cancel the current draft before importing another document",
+                false,
+                None,
+            ));
+        }
+        let document = args.document.clone();
+        let response = self
+            .authoring_call(
+                AuthoringOperation::DraftImport,
+                serde_json::to_value(args).unwrap_or_default(),
+            )
+            .await;
+        if response.0.ok {
+            // The frontend remains the application owner; Rust retains a
+            // validated mirror for subsequent expected-revision operations.
+            if self
+                .drafts
+                .create(
+                    &self.authoring_session_id,
+                    document,
+                    &catalog.fingerprint,
+                    &catalog.bones,
+                )
+                .is_err()
+            {
+                return Json(ToolEnvelope::failure(
+                    "INTERNAL",
+                    "frontend imported a document but Rust draft mirror could not be created",
+                    false,
+                    None,
+                ));
+            }
+        }
+        response
+    }
+
+    #[tool(
+        name = "animation_session_status",
+        description = "Read the current authoring session, live rig fingerprint, preview and permission state."
+    )]
+    pub async fn animation_session_status(
+        &self,
+        Parameters(_args): Parameters<EmptyArgs>,
+    ) -> Json<ToolEnvelope<serde_json::Value>> {
+        self.authoring_call(AuthoringOperation::SessionStatus, serde_json::json!({}))
+            .await
+    }
+
+    #[tool(
+        name = "animation_cancel_session",
+        description = "Cancel the authoring session and stop preview, confirmation and draft state."
+    )]
+    pub async fn animation_cancel_session(
+        &self,
+        Parameters(_args): Parameters<EmptyArgs>,
+    ) -> Json<ToolEnvelope<serde_json::Value>> {
+        let response = self
+            .authoring_call(AuthoringOperation::SessionCancel, serde_json::json!({}))
+            .await;
+        if response.0.ok {
+            let _ = self.drafts.remove(&self.authoring_session_id);
+        }
+        response
     }
 }
 
