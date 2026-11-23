@@ -100,6 +100,7 @@ impl AuthoringGuard {
                 && state.active_session.as_deref() == Some(request.session_id.as_str())
             {
                 state.active_session = None;
+                state.last_sequence.remove(&request.session_id);
             }
         }
     }
@@ -108,6 +109,7 @@ impl AuthoringGuard {
         if let Ok(mut state) = self.0.lock() {
             if state.active_session.as_deref() == Some(request.session_id.as_str()) {
                 state.active_session = None;
+                state.last_sequence.remove(&request.session_id);
             }
         }
     }
@@ -671,6 +673,27 @@ mod tests {
             guard.reserve(&next),
             Err(AuthoringErrorCode::SessionConflict)
         );
+    }
+
+    #[test]
+    fn replay_guard_releases_failed_or_disconnected_session() {
+        let guard = AuthoringGuard::default();
+        let request = sample_authoring_request();
+        assert_eq!(guard.reserve(&request), Ok(()));
+        guard.disconnected(&request);
+        let mut restarted = request.clone();
+        restarted.request_id = "fresh-session".into();
+        restarted.sequence = 1;
+        restarted.session_id = "session-2".into();
+        assert_eq!(guard.reserve(&restarted), Ok(()));
+        let failure = restarted.error_response(
+            restarted.error(AuthoringErrorCode::InvalidDocument, "test create failure"),
+        );
+        guard.finish(&restarted, &failure);
+        let mut retry = restarted;
+        retry.request_id = "retry-session".into();
+        retry.sequence = 1;
+        assert_eq!(guard.reserve(&retry), Ok(()));
     }
 
     #[tokio::test]
