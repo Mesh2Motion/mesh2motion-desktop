@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+mod animation_document;
 mod ipc;
 mod model;
 #[cfg(feature = "mcp-server")]
@@ -12,6 +13,7 @@ mod host_stub;
 #[cfg(feature = "ipc-host")]
 mod store;
 
+pub use animation_document::*;
 #[cfg(all(feature = "ipc-host", unix))]
 pub use host::{HostError, McpHost};
 #[cfg(all(feature = "ipc-host", not(unix)))]
