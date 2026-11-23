@@ -1,4 +1,4 @@
-use crate::{AuthoringHandler, SnapshotStore};
+use crate::{AuthoringHandler, PoseImageChunkHandler, PoseObservationHandler, SnapshotStore};
 
 #[derive(Debug)]
 pub struct HostError;
@@ -12,6 +12,14 @@ impl McpHost {
     pub fn start_with_authoring(
         _store: SnapshotStore,
         _authoring_handler: Option<AuthoringHandler>,
+    ) -> Result<Self, HostError> {
+        Err(HostError)
+    }
+    pub fn start_with_handlers(
+        _store: SnapshotStore,
+        _authoring_handler: Option<AuthoringHandler>,
+        _observation_handler: Option<PoseObservationHandler>,
+        _image_chunk_handler: Option<PoseImageChunkHandler>,
     ) -> Result<Self, HostError> {
         Err(HostError)
     }

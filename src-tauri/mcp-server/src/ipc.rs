@@ -19,6 +19,8 @@ use tokio::{
 use crate::{
     authoring_bridge::{AuthoringRequest, AuthoringResponse, MAX_AUTHORING_REQUEST_BYTES},
     model::ControlSnapshot,
+    PoseImageChunkRequest, PoseImageChunkResponse, PoseObservationRequest, PoseObservationResponse,
+    MAX_POSE_REQUEST_BYTES,
 };
 
 pub const IPC_PROTOCOL_VERSION: u16 = 1;
@@ -42,6 +44,8 @@ pub struct IpcRequest {
 pub enum IpcMethod {
     SnapshotGet,
     AuthoringRequest { request: AuthoringRequest },
+    PoseObservationRequest { request: PoseObservationRequest },
+    PoseImageChunkRequest { request: PoseImageChunkRequest },
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -52,6 +56,10 @@ pub struct IpcResponse {
     pub snapshot: Option<ControlSnapshot>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub authoring_response: Option<AuthoringResponse>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pose_observation_response: Option<PoseObservationResponse>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pose_image_chunk_response: Option<PoseImageChunkResponse>,
     pub error: Option<IpcErrorCode>,
 }
 
@@ -62,6 +70,8 @@ impl IpcResponse {
             request_id,
             snapshot: Some(snapshot),
             authoring_response: None,
+            pose_observation_response: None,
+            pose_image_chunk_response: None,
             error: None,
         }
     }
@@ -72,6 +82,8 @@ impl IpcResponse {
             request_id,
             snapshot: None,
             authoring_response: Some(response),
+            pose_observation_response: None,
+            pose_image_chunk_response: None,
             error: None,
         }
     }
@@ -82,7 +94,33 @@ impl IpcResponse {
             request_id,
             snapshot: None,
             authoring_response: None,
+            pose_observation_response: None,
+            pose_image_chunk_response: None,
             error: Some(error),
+        }
+    }
+
+    pub fn pose_observation(request_id: u64, response: PoseObservationResponse) -> Self {
+        Self {
+            protocol_version: IPC_PROTOCOL_VERSION,
+            request_id,
+            snapshot: None,
+            authoring_response: None,
+            pose_observation_response: Some(response),
+            pose_image_chunk_response: None,
+            error: None,
+        }
+    }
+
+    pub fn pose_image_chunk(request_id: u64, response: PoseImageChunkResponse) -> Self {
+        Self {
+            protocol_version: IPC_PROTOCOL_VERSION,
+            request_id,
+            snapshot: None,
+            authoring_response: None,
+            pose_observation_response: None,
+            pose_image_chunk_response: Some(response),
+            error: None,
         }
     }
 }
@@ -116,9 +154,25 @@ pub type SnapshotFuture<'a> =
 
 pub type AuthoringFuture<'a> =
     Pin<Box<dyn Future<Output = Result<AuthoringResponse, IpcError>> + Send + 'a>>;
+pub type PoseObservationFuture<'a> =
+    Pin<Box<dyn Future<Output = Result<PoseObservationResponse, IpcError>> + Send + 'a>>;
+pub type PoseImageChunkFuture<'a> =
+    Pin<Box<dyn Future<Output = Result<PoseImageChunkResponse, IpcError>> + Send + 'a>>;
 
 pub type AuthoringHandler = Arc<
     dyn Fn(AuthoringRequest) -> Pin<Box<dyn Future<Output = AuthoringResponse> + Send>>
+        + Send
+        + Sync,
+>;
+pub type PoseObservationHandler = Arc<
+    dyn Fn(PoseObservationRequest) -> Pin<Box<dyn Future<Output = PoseObservationResponse> + Send>>
+        + Send
+        + Sync,
+>;
+pub type PoseImageChunkHandler = Arc<
+    dyn Fn(
+            PoseImageChunkRequest,
+        ) -> Pin<Box<dyn Future<Output = Option<PoseImageChunkResponse>> + Send>>
         + Send
         + Sync,
 >;
@@ -127,6 +181,17 @@ pub trait AppSnapshotSource: Send + Sync {
     fn snapshot(&self) -> SnapshotFuture<'_>;
 
     fn authoring_request(&self, _request: AuthoringRequest) -> AuthoringFuture<'_> {
+        Box::pin(async { Err(IpcError::AuthoringDisabled) })
+    }
+
+    fn pose_observation_request(
+        &self,
+        _request: PoseObservationRequest,
+    ) -> PoseObservationFuture<'_> {
+        Box::pin(async { Err(IpcError::AuthoringDisabled) })
+    }
+
+    fn pose_image_chunk(&self, _request: PoseImageChunkRequest) -> PoseImageChunkFuture<'_> {
         Box::pin(async { Err(IpcError::AuthoringDisabled) })
     }
 }
@@ -280,6 +345,96 @@ impl IpcClient {
         }
         Ok(authoring_response)
     }
+
+    async fn send_pose_observation(
+        &self,
+        bridge_request: PoseObservationRequest,
+    ) -> Result<PoseObservationResponse, IpcError> {
+        bridge_request
+            .validate()
+            .map_err(|_| IpcError::InvalidResponse)?;
+        let endpoint = self.endpoint.as_deref().ok_or(IpcError::Unavailable)?;
+        let mut stream = connect_stream(endpoint).await.map_err(|_| {
+            if self.connected_once.load(Ordering::Acquire) {
+                IpcError::Disconnected
+            } else {
+                IpcError::Unavailable
+            }
+        })?;
+        self.connected_once.store(true, Ordering::Release);
+        let request_id = self.next_request_id();
+        let ipc_request = IpcRequest {
+            protocol_version: IPC_PROTOCOL_VERSION,
+            request_id,
+            method: IpcMethod::PoseObservationRequest {
+                request: bridge_request.clone(),
+            },
+        };
+        let bytes = serde_json::to_vec(&ipc_request).map_err(|_| IpcError::InvalidResponse)?;
+        if bytes.len() > IPC_MAX_FRAME_BYTES || bytes.len() > MAX_POSE_REQUEST_BYTES + 1024 {
+            return Err(IpcError::InvalidResponse);
+        }
+        write_frame(&mut stream, &bytes).await?;
+        let response_bytes = read_frame_with_timeout(
+            &mut stream,
+            Duration::from_millis(bridge_request.deadline_ms as u64 + 500),
+        )
+        .await?;
+        let response: IpcResponse =
+            serde_json::from_slice(&response_bytes).map_err(|_| IpcError::InvalidResponse)?;
+        if response.protocol_version != IPC_PROTOCOL_VERSION || response.request_id != request_id {
+            return Err(IpcError::IncompatibleVersion);
+        }
+        let pose_response = response
+            .pose_observation_response
+            .ok_or(IpcError::InvalidResponse)?;
+        if !bridge_request.validate_response(&pose_response) {
+            return Err(IpcError::InvalidResponse);
+        }
+        Ok(pose_response)
+    }
+
+    async fn send_pose_image_chunk(
+        &self,
+        request: PoseImageChunkRequest,
+    ) -> Result<PoseImageChunkResponse, IpcError> {
+        request.validate().map_err(|_| IpcError::InvalidResponse)?;
+        let endpoint = self.endpoint.as_deref().ok_or(IpcError::Unavailable)?;
+        let mut stream = connect_stream(endpoint).await.map_err(|_| {
+            if self.connected_once.load(Ordering::Acquire) {
+                IpcError::Disconnected
+            } else {
+                IpcError::Unavailable
+            }
+        })?;
+        self.connected_once.store(true, Ordering::Release);
+        let request_id = self.next_request_id();
+        let ipc_request = IpcRequest {
+            protocol_version: IPC_PROTOCOL_VERSION,
+            request_id,
+            method: IpcMethod::PoseImageChunkRequest {
+                request: request.clone(),
+            },
+        };
+        let bytes = serde_json::to_vec(&ipc_request).map_err(|_| IpcError::InvalidResponse)?;
+        if bytes.len() > IPC_MAX_FRAME_BYTES {
+            return Err(IpcError::InvalidResponse);
+        }
+        write_frame(&mut stream, &bytes).await?;
+        let response_bytes = read_frame_with_timeout(&mut stream, Duration::from_secs(30)).await?;
+        let response: IpcResponse =
+            serde_json::from_slice(&response_bytes).map_err(|_| IpcError::InvalidResponse)?;
+        if response.protocol_version != IPC_PROTOCOL_VERSION || response.request_id != request_id {
+            return Err(IpcError::IncompatibleVersion);
+        }
+        let chunk = response
+            .pose_image_chunk_response
+            .ok_or(IpcError::InvalidResponse)?;
+        if !request.validate_response(&chunk) {
+            return Err(IpcError::InvalidResponse);
+        }
+        Ok(chunk)
+    }
 }
 
 impl AppSnapshotSource for IpcClient {
@@ -289,6 +444,17 @@ impl AppSnapshotSource for IpcClient {
 
     fn authoring_request(&self, request: AuthoringRequest) -> AuthoringFuture<'_> {
         Box::pin(self.send_authoring(request))
+    }
+
+    fn pose_observation_request(
+        &self,
+        request: PoseObservationRequest,
+    ) -> PoseObservationFuture<'_> {
+        Box::pin(self.send_pose_observation(request))
+    }
+
+    fn pose_image_chunk(&self, request: PoseImageChunkRequest) -> PoseImageChunkFuture<'_> {
+        Box::pin(self.send_pose_image_chunk(request))
     }
 }
 
@@ -485,6 +651,8 @@ mod tests {
                 request_id: request.request_id,
                 snapshot: Some(crate::tests::mock_snapshot()),
                 authoring_response: None,
+                pose_observation_response: None,
+                pose_image_chunk_response: None,
                 error: None,
             };
             let response_bytes = serde_json::to_vec(&response).unwrap();

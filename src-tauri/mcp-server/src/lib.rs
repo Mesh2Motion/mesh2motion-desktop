@@ -4,6 +4,7 @@ mod animation_document;
 mod authoring_bridge;
 mod ipc;
 mod model;
+mod pose_observation;
 #[cfg(feature = "mcp-server")]
 mod server;
 
@@ -26,9 +27,16 @@ pub use host::{HostError, McpHost};
 pub use host_stub::{HostError, McpHost};
 pub use ipc::{
     AppSnapshotSource, AuthoringFuture, AuthoringHandler, IpcClient, IpcError, IpcRequest,
-    IpcResponse, SnapshotFuture, IPC_MAX_FRAME_BYTES, IPC_PROTOCOL_VERSION,
+    IpcResponse, PoseImageChunkFuture, PoseImageChunkHandler, PoseObservationFuture,
+    PoseObservationHandler, SnapshotFuture, IPC_MAX_FRAME_BYTES, IPC_PROTOCOL_VERSION,
 };
 pub use model::*;
+pub use pose_observation::{
+    PoseImageChunkRequest, PoseImageChunkResponse, PoseObservationError, PoseObservationOperation,
+    PoseObservationRequest, PoseObservationResponse, MAX_IMAGE_CHUNK_BYTES, MAX_POSE_DEADLINE_MS,
+    MAX_POSE_ID_BYTES, MAX_POSE_REQUEST_BYTES, MIN_POSE_DEADLINE_MS,
+    OBSERVATION_IMAGE_REQUEST_EVENT, OBSERVATION_IMAGE_RESPOND_COMMAND, POSE_OBSERVATION_PROTOCOL,
+};
 #[cfg(feature = "mcp-server")]
 pub use server::Mesh2MotionMcp;
 #[cfg(feature = "ipc-host")]

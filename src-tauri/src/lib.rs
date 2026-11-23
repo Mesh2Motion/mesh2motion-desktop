@@ -1,7 +1,9 @@
 #[cfg(feature = "mcp-host")]
 use mesh2motion_mcp::{
     AppSnapshotSource, AuthoringErrorCode, AuthoringHandler, AuthoringOperation, AuthoringRequest,
-    AuthoringResponse, AUTHORING_BRIDGE_PROTOCOL,
+    AuthoringResponse, PoseImageChunkHandler, PoseImageChunkRequest, PoseImageChunkResponse,
+    PoseObservationHandler, PoseObservationRequest, PoseObservationResponse,
+    AUTHORING_BRIDGE_PROTOCOL, OBSERVATION_IMAGE_REQUEST_EVENT,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -140,6 +142,7 @@ struct McpHostState {
     store: mesh2motion_mcp::SnapshotStore,
     host: Mutex<Option<mesh2motion_mcp::McpHost>>,
     authoring: Arc<AuthoringBridgeState>,
+    observation: Arc<PoseObservationBridgeState>,
 }
 
 #[cfg(feature = "mcp-host")]
@@ -154,7 +157,31 @@ struct AuthoringBridgeState {
 struct PendingAuthoring {
     session_id: String,
     sequence: u64,
+    operation: AuthoringOperation,
     sender: SyncSender<AuthoringResponse>,
+}
+
+#[cfg(feature = "mcp-host")]
+struct PoseObservationBridgeState {
+    app: AppHandle,
+    authoring: Arc<AuthoringBridgeState>,
+    pending_pose: Mutex<HashMap<String, PendingPoseObservation>>,
+    pending_image: Mutex<HashMap<String, PendingPoseImage>>,
+    captures: Mutex<HashMap<String, String>>,
+}
+
+#[cfg(feature = "mcp-host")]
+struct PendingPoseObservation {
+    request: PoseObservationRequest,
+    session_id: String,
+    sequence: u64,
+    sender: SyncSender<PoseObservationResponse>,
+}
+
+#[cfg(feature = "mcp-host")]
+struct PendingPoseImage {
+    request: PoseImageChunkRequest,
+    sender: SyncSender<Option<PoseImageChunkResponse>>,
 }
 
 #[cfg(feature = "mcp-host")]
@@ -208,6 +235,386 @@ impl AuthoringBridgeState {
             pending.clear();
         }
     }
+}
+
+#[cfg(feature = "mcp-host")]
+impl PoseObservationBridgeState {
+    fn new(app: AppHandle, authoring: Arc<AuthoringBridgeState>) -> Self {
+        Self {
+            app,
+            authoring,
+            pending_pose: Mutex::new(HashMap::new()),
+            pending_image: Mutex::new(HashMap::new()),
+            captures: Mutex::new(HashMap::new()),
+        }
+    }
+
+    fn cancel_all(&self) {
+        if let Ok(mut pending) = self.pending_pose.lock() {
+            for (request_id, entry) in pending.iter() {
+                let _ = self.app.emit(
+                    "m2m-pose-observation-cancel",
+                    serde_json::json!({"protocol":"mcp-pose-observation/v1","request_id":request_id,"session_id":entry.session_id}),
+                );
+                let _ = entry.sender.try_send(
+                    entry.request.error_response(
+                        entry
+                            .request
+                            .error("CAPTURE_CANCELLED", "observation bridge is shutting down"),
+                    ),
+                );
+            }
+            pending.clear();
+        }
+        if let Ok(mut pending) = self.pending_image.lock() {
+            for (request_id, entry) in pending.iter() {
+                let _ = self.app.emit(
+                    "m2m-pose-observation-cancel",
+                    serde_json::json!({"protocol":"mcp-pose-observation/v1","request_id":request_id,"session_id":entry.request.session_id,"capture_id":entry.request.capture_id}),
+                );
+                let _ = entry.sender.try_send(None);
+            }
+            pending.clear();
+        }
+        if let Ok(mut captures) = self.captures.lock() {
+            for (capture_id, session_id) in captures.iter() {
+                let _ = self.app.emit("m2m-pose-observation-cancel", serde_json::json!({"protocol":"mcp-pose-observation/v1","session_id":session_id,"capture_id":capture_id}));
+            }
+            captures.clear();
+        }
+    }
+
+    fn cancel_session(&self, session_id: &str) {
+        if let Ok(mut pending) = self.pending_pose.lock() {
+            let ids = pending
+                .iter()
+                .filter(|(_, entry)| entry.session_id == session_id)
+                .map(|(id, _)| id.clone())
+                .collect::<Vec<_>>();
+            for request_id in ids {
+                if let Some(entry) = pending.remove(&request_id) {
+                    let _ = entry.sender.try_send(
+                        entry.request.error_response(
+                            entry
+                                .request
+                                .error("CAPTURE_CANCELLED", "authoring session was cancelled"),
+                        ),
+                    );
+                    let _ = self.app.emit("m2m-pose-observation-cancel", serde_json::json!({"protocol":"mcp-pose-observation/v1","request_id":request_id,"session_id":session_id}));
+                }
+            }
+        }
+        if let Ok(mut pending) = self.pending_image.lock() {
+            let ids = pending
+                .iter()
+                .filter(|(_, entry)| entry.request.session_id == session_id)
+                .map(|(id, _)| id.clone())
+                .collect::<Vec<_>>();
+            for request_id in ids {
+                if let Some(entry) = pending.remove(&request_id) {
+                    let _ = entry.sender.try_send(None);
+                    let _ = self.app.emit("m2m-pose-observation-cancel", serde_json::json!({"protocol":"mcp-pose-observation/v1","request_id":request_id,"session_id":session_id,"capture_id":entry.request.capture_id}));
+                }
+            }
+        }
+        if let Ok(mut captures) = self.captures.lock() {
+            let ids = captures
+                .iter()
+                .filter(|(_, owner)| owner.as_str() == session_id)
+                .map(|(id, _)| id.clone())
+                .collect::<Vec<_>>();
+            for capture_id in ids {
+                captures.remove(&capture_id);
+                let _ = self.app.emit("m2m-pose-observation-cancel", serde_json::json!({"protocol":"mcp-pose-observation/v1","session_id":session_id,"capture_id":capture_id}));
+            }
+        }
+    }
+}
+
+#[cfg(feature = "mcp-host")]
+struct PoseWaitState {
+    result: Option<PoseObservationResponse>,
+    waker: Option<Waker>,
+}
+
+#[cfg(feature = "mcp-host")]
+struct PoseWait {
+    state: Arc<Mutex<PoseWaitState>>,
+    cancelled: Arc<AtomicBool>,
+    bridge: Arc<PoseObservationBridgeState>,
+    request_id: String,
+    session_id: String,
+    completed: bool,
+}
+
+#[cfg(feature = "mcp-host")]
+impl Future for PoseWait {
+    type Output = PoseObservationResponse;
+    fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = self.get_mut();
+        let Ok(mut state) = this.state.lock() else {
+            return Poll::Pending;
+        };
+        if let Some(response) = state.result.take() {
+            this.completed = true;
+            return Poll::Ready(response);
+        }
+        state.waker = Some(context.waker().clone());
+        Poll::Pending
+    }
+}
+
+#[cfg(feature = "mcp-host")]
+impl Drop for PoseWait {
+    fn drop(&mut self) {
+        if self.completed {
+            return;
+        }
+        self.cancelled.store(true, Ordering::Release);
+        let _ = self.bridge.app.emit(
+            "m2m-pose-observation-cancel",
+            serde_json::json!({"protocol":"mcp-pose-observation/v1","request_id":self.request_id,"session_id":self.session_id}),
+        );
+        if let Ok(mut pending) = self.bridge.pending_pose.lock() {
+            pending.remove(&self.request_id);
+        }
+    }
+}
+
+#[cfg(feature = "mcp-host")]
+struct ImageWaitState {
+    result: Option<Option<PoseImageChunkResponse>>,
+    waker: Option<Waker>,
+}
+
+#[cfg(feature = "mcp-host")]
+struct ImageWait {
+    state: Arc<Mutex<ImageWaitState>>,
+    cancelled: Arc<AtomicBool>,
+    bridge: Arc<PoseObservationBridgeState>,
+    request: PoseImageChunkRequest,
+    completed: bool,
+}
+
+#[cfg(feature = "mcp-host")]
+impl Future for ImageWait {
+    type Output = Option<PoseImageChunkResponse>;
+    fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = self.get_mut();
+        let Ok(mut state) = this.state.lock() else {
+            return Poll::Pending;
+        };
+        if let Some(response) = state.result.take() {
+            this.completed = true;
+            return Poll::Ready(response);
+        }
+        state.waker = Some(context.waker().clone());
+        Poll::Pending
+    }
+}
+
+#[cfg(feature = "mcp-host")]
+impl Drop for ImageWait {
+    fn drop(&mut self) {
+        if self.completed {
+            return;
+        }
+        self.cancelled.store(true, Ordering::Release);
+        let _ = self.bridge.app.emit(
+            "m2m-pose-observation-cancel",
+            serde_json::json!({"protocol":"mcp-pose-observation/v1","request_id":self.request.request_id,"session_id":self.request.session_id,"capture_id":self.request.capture_id}),
+        );
+        if let Ok(mut pending) = self.bridge.pending_image.lock() {
+            pending.remove(&self.request.request_id);
+        }
+    }
+}
+
+#[cfg(feature = "mcp-host")]
+fn make_pose_observation_handler(
+    bridge: &Arc<PoseObservationBridgeState>,
+) -> PoseObservationHandler {
+    let bridge = Arc::downgrade(bridge);
+    Arc::new(move |request: PoseObservationRequest| {
+        let Some(bridge) = bridge.upgrade() else {
+            return Box::pin(async move {
+                request.error_response(
+                    request.error("RIG_UNAVAILABLE", "native application is shutting down"),
+                )
+            }) as Pin<Box<dyn Future<Output = PoseObservationResponse> + Send>>;
+        };
+        if !bridge.authoring.is_enabled()
+            || !bridge.authoring.frontend_ready.load(Ordering::Acquire)
+        {
+            return Box::pin(async move {
+                request.error_response(request.error(
+                    "SESSION_CONFLICT",
+                    "trusted authoring session is not active",
+                ))
+            });
+        }
+        let (sender, receiver) = mpsc::sync_channel(1);
+        let inserted = bridge
+            .pending_pose
+            .lock()
+            .map(|mut pending| {
+                if !pending.is_empty() || pending.contains_key(&request.request_id) {
+                    return false;
+                }
+                pending.insert(
+                    request.request_id.clone(),
+                    PendingPoseObservation {
+                        request: request.clone(),
+                        session_id: request.session_id.clone(),
+                        sequence: request.sequence,
+                        sender,
+                    },
+                );
+                true
+            })
+            .unwrap_or(false);
+        if !inserted {
+            return Box::pin(async move {
+                request.error_response(request.error(
+                    "RESOURCE_LIMIT_EXCEEDED",
+                    "another observation request is pending",
+                ))
+            });
+        }
+        if bridge
+            .app
+            .emit("m2m-pose-observation-request", request.clone())
+            .is_err()
+        {
+            if let Ok(mut pending) = bridge.pending_pose.lock() {
+                pending.remove(&request.request_id);
+            }
+            return Box::pin(async move {
+                request.error_response(request.error(
+                    "RIG_UNAVAILABLE",
+                    "frontend observation listener is unavailable",
+                ))
+            });
+        }
+        let state = Arc::new(Mutex::new(PoseWaitState {
+            result: None,
+            waker: None,
+        }));
+        let worker_state = state.clone();
+        let worker_bridge = bridge.clone();
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let worker_cancelled = cancelled.clone();
+        let worker_request = request.clone();
+        std::thread::spawn(move || {
+            let response = receiver
+                .recv_timeout(Duration::from_millis(worker_request.deadline_ms as u64))
+                .unwrap_or_else(|_| {
+                    worker_request.error_response(worker_request.error(
+                        "DEADLINE_EXCEEDED",
+                        "frontend observation response exceeded the request deadline",
+                    ))
+                });
+            if let Ok(mut pending) = worker_bridge.pending_pose.lock() {
+                pending.remove(&worker_request.request_id);
+            }
+            if !worker_cancelled.load(Ordering::Acquire) {
+                if let Ok(mut shared) = worker_state.lock() {
+                    shared.result = Some(response);
+                    if let Some(waker) = shared.waker.take() {
+                        waker.wake();
+                    }
+                }
+            }
+        });
+        Box::pin(PoseWait {
+            state,
+            cancelled,
+            bridge,
+            request_id: request.request_id,
+            session_id: request.session_id,
+            completed: false,
+        })
+    })
+}
+
+#[cfg(feature = "mcp-host")]
+fn make_pose_image_chunk_handler(
+    bridge: &Arc<PoseObservationBridgeState>,
+) -> PoseImageChunkHandler {
+    let bridge = Arc::downgrade(bridge);
+    Arc::new(move |request: PoseImageChunkRequest| {
+        let Some(bridge) = bridge.upgrade() else {
+            return Box::pin(async { None })
+                as Pin<Box<dyn Future<Output = Option<PoseImageChunkResponse>> + Send>>;
+        };
+        if !bridge.authoring.is_enabled()
+            || !bridge.authoring.frontend_ready.load(Ordering::Acquire)
+            || request.validate().is_err()
+        {
+            return Box::pin(async { None });
+        }
+        let (sender, receiver) = mpsc::sync_channel(1);
+        let inserted = bridge
+            .pending_image
+            .lock()
+            .map(|mut pending| {
+                if !pending.is_empty() || pending.contains_key(&request.request_id) {
+                    return false;
+                }
+                pending.insert(
+                    request.request_id.clone(),
+                    PendingPoseImage {
+                        request: request.clone(),
+                        sender,
+                    },
+                );
+                true
+            })
+            .unwrap_or(false);
+        if !inserted
+            || bridge
+                .app
+                .emit(OBSERVATION_IMAGE_REQUEST_EVENT, request.clone())
+                .is_err()
+        {
+            if let Ok(mut pending) = bridge.pending_image.lock() {
+                pending.remove(&request.request_id);
+            }
+            return Box::pin(async { None });
+        }
+        let state = Arc::new(Mutex::new(ImageWaitState {
+            result: None,
+            waker: None,
+        }));
+        let worker_state = state.clone();
+        let worker_bridge = bridge.clone();
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let worker_cancelled = cancelled.clone();
+        let worker_request = request.clone();
+        std::thread::spawn(move || {
+            let response = receiver
+                .recv_timeout(Duration::from_secs(30))
+                .unwrap_or(None);
+            if let Ok(mut pending) = worker_bridge.pending_image.lock() {
+                pending.remove(&worker_request.request_id);
+            }
+            if !worker_cancelled.load(Ordering::Acquire) {
+                if let Ok(mut shared) = worker_state.lock() {
+                    shared.result = Some(response);
+                    if let Some(waker) = shared.waker.take() {
+                        waker.wake();
+                    }
+                }
+            }
+        });
+        Box::pin(ImageWait {
+            state,
+            cancelled,
+            bridge,
+            request,
+            completed: false,
+        })
+    })
 }
 
 #[cfg(feature = "mcp-host")]
@@ -304,6 +711,7 @@ fn make_authoring_handler(state: &Arc<AuthoringBridgeState>) -> AuthoringHandler
                         PendingAuthoring {
                             session_id: request.session_id.clone(),
                             sequence: request.sequence,
+                            operation: request.operation,
                             sender,
                         },
                     );
@@ -386,10 +794,18 @@ struct McpHostState;
 impl McpHostState {
     fn new(app: AppHandle) -> Self {
         let store = mesh2motion_mcp::SnapshotStore::default();
-        let authoring = Arc::new(AuthoringBridgeState::new(app));
+        let authoring = Arc::new(AuthoringBridgeState::new(app.clone()));
+        let observation = Arc::new(PoseObservationBridgeState::new(app, authoring.clone()));
         let host = if std::env::var("M2M_MCP_ENABLE").as_deref() == Ok("1") {
             let handler = make_authoring_handler(&authoring);
-            match mesh2motion_mcp::McpHost::start_with_authoring(store.clone(), Some(handler)) {
+            let observation_handler = make_pose_observation_handler(&observation);
+            let image_handler = make_pose_image_chunk_handler(&observation);
+            match mesh2motion_mcp::McpHost::start_with_handlers(
+                store.clone(),
+                Some(handler),
+                Some(observation_handler),
+                Some(image_handler),
+            ) {
                 Ok(host) => {
                     eprintln!(
                         "M2M_HOST enabled=true socket_bound=true endpoint={}",
@@ -409,6 +825,7 @@ impl McpHostState {
             store,
             host: Mutex::new(host),
             authoring,
+            observation,
         }
     }
 
@@ -471,9 +888,15 @@ impl McpHostState {
             return Ok(());
         }
         let handler = make_authoring_handler(&self.authoring);
-        let started =
-            mesh2motion_mcp::McpHost::start_with_authoring(self.store.clone(), Some(handler))
-                .map_err(|error| host_error_code(&error).to_owned())?;
+        let observation_handler = make_pose_observation_handler(&self.observation);
+        let image_handler = make_pose_image_chunk_handler(&self.observation);
+        let started = mesh2motion_mcp::McpHost::start_with_handlers(
+            self.store.clone(),
+            Some(handler),
+            Some(observation_handler),
+            Some(image_handler),
+        )
+        .map_err(|error| host_error_code(&error).to_owned())?;
         *host = Some(started);
         let endpoint = host
             .as_ref()
@@ -484,6 +907,7 @@ impl McpHostState {
     }
 
     fn disable(&self) -> Result<(), String> {
+        self.observation.cancel_all();
         self.authoring.disable();
         let mut host = self
             .host
@@ -650,10 +1074,16 @@ fn mcp_authoring_respond(
         eprintln!("M2M_AUTHORING response_rejected reason=correlation");
         return Err("AUTHORING_RESPONSE_MISMATCH".to_owned());
     }
+    let cancel_observation = entry.operation == AuthoringOperation::SessionCancel && response.ok;
+    let session_id = entry.session_id.clone();
     entry
         .sender
         .try_send(response)
         .map_err(|_| "AUTHORING_RESPONSE_REJECTED".to_owned())?;
+    drop(pending);
+    if cancel_observation {
+        state.observation.cancel_session(&session_id);
+    }
     eprintln!("M2M_AUTHORING response_accepted");
     Ok(())
 }
@@ -692,6 +1122,98 @@ fn mcp_authoring_frontend_stage(stage: String, detail: Option<String>) -> Result
         .collect::<String>();
     eprintln!("M2M_AUTHORING frontend_stage={stage} detail={detail}");
     Ok(())
+}
+
+#[cfg(feature = "mcp-host")]
+#[tauri::command]
+fn mcp_pose_observation_respond(
+    response: PoseObservationResponse,
+    state: State<'_, McpHostState>,
+) -> Result<(), String> {
+    let pending = state
+        .observation
+        .pending_pose
+        .lock()
+        .map_err(|_| "POSE_OBSERVATION_STATE_LOCKED".to_owned())?;
+    let Some(entry) = pending.get(&response.request_id) else {
+        return Err("POSE_OBSERVATION_REQUEST_NOT_PENDING".to_owned());
+    };
+    if response.protocol != "mcp-pose-observation/v1"
+        || response.session_id != entry.session_id
+        || response.sequence != entry.sequence
+        || response.ok != response.result.is_some()
+        || response.ok == response.error.is_some()
+        || serde_json::to_vec(&response).map_or(true, |bytes| {
+            bytes.len() > mesh2motion_mcp::MAX_POSE_REQUEST_BYTES - 1024
+        })
+    {
+        return Err("POSE_OBSERVATION_RESPONSE_MISMATCH".to_owned());
+    }
+    let capture_id = response
+        .result
+        .as_ref()
+        .and_then(|result| result.get("capture_id"))
+        .and_then(Value::as_str)
+        .map(str::to_owned);
+    let session_id = response.session_id.clone();
+    let successful = response.ok;
+    entry
+        .sender
+        .try_send(response)
+        .map_err(|_| "POSE_OBSERVATION_RESPONSE_REJECTED".to_owned())?;
+    drop(pending);
+    if successful {
+        if let Some(capture_id) = capture_id {
+            let mut captures = state
+                .observation
+                .captures
+                .lock()
+                .map_err(|_| "POSE_OBSERVATION_STATE_LOCKED".to_owned())?;
+            if captures.contains_key(&capture_id) {
+                return Err("POSE_CAPTURE_ID_DUPLICATE".to_owned());
+            }
+            captures.insert(capture_id, session_id);
+            while captures.len() > 4 {
+                if let Some(oldest) = captures.keys().next().cloned() {
+                    captures.remove(&oldest);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(feature = "mcp-host")]
+#[tauri::command]
+fn mcp_pose_observation_image_respond(
+    response: PoseImageChunkResponse,
+    state: State<'_, McpHostState>,
+) -> Result<(), String> {
+    let pending = state
+        .observation
+        .pending_image
+        .lock()
+        .map_err(|_| "POSE_IMAGE_STATE_LOCKED".to_owned())?;
+    let Some(entry) = pending.get(&response.request_id) else {
+        return Err("POSE_IMAGE_REQUEST_NOT_PENDING".to_owned());
+    };
+    let encoded_len_limit = entry.request.max_bytes.saturating_add(2) / 3 * 4 + 4;
+    if !entry.request.validate_response(&response)
+        || response.bytes_base64.len() > encoded_len_limit
+        || !response
+            .bytes_base64
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'+' | b'/' | b'='))
+        || serde_json::to_vec(&response).map_or(true, |bytes| {
+            bytes.len() > mesh2motion_mcp::IPC_MAX_FRAME_BYTES
+        })
+    {
+        return Err("POSE_IMAGE_RESPONSE_MISMATCH".to_owned());
+    }
+    entry
+        .sender
+        .try_send(Some(response))
+        .map_err(|_| "POSE_IMAGE_RESPONSE_REJECTED".to_owned())
 }
 
 #[tauri::command]
@@ -920,7 +1442,11 @@ pub fn run() {
             #[cfg(feature = "mcp-host")]
             mcp_authoring_frontend_set_ready,
             #[cfg(feature = "mcp-host")]
-            mcp_authoring_frontend_stage
+            mcp_authoring_frontend_stage,
+            #[cfg(feature = "mcp-host")]
+            mcp_pose_observation_respond,
+            #[cfg(feature = "mcp-host")]
+            mcp_pose_observation_image_respond
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

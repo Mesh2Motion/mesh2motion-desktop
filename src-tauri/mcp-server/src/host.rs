@@ -24,8 +24,8 @@ use tokio::{
 use crate::{
     authoring_bridge::{AuthoringErrorCode, AuthoringOperation, AuthoringRequest},
     ipc::{
-        AuthoringHandler, IpcErrorCode, IpcMethod, IpcRequest, IpcResponse, IPC_MAX_FRAME_BYTES,
-        IPC_PROTOCOL_VERSION,
+        AuthoringHandler, IpcErrorCode, IpcMethod, IpcRequest, IpcResponse, PoseImageChunkHandler,
+        PoseObservationHandler, IPC_MAX_FRAME_BYTES, IPC_PROTOCOL_VERSION,
     },
     store::{SnapshotStore, StoreStatus, MAX_SNAPSHOT_BYTES},
 };
@@ -119,6 +119,65 @@ impl AuthoringGuard {
             }
         }
     }
+
+    fn authorizes(&self, session_id: &str) -> bool {
+        self.0
+            .lock()
+            .is_ok_and(|state| state.active_session.as_deref() == Some(session_id))
+    }
+}
+
+#[derive(Default)]
+struct ObservationGuardState {
+    seen_ids: HashSet<String>,
+    last_sequence: HashMap<String, u64>,
+}
+
+#[derive(Clone, Default)]
+struct ObservationGuard(Arc<Mutex<ObservationGuardState>>);
+
+impl ObservationGuard {
+    fn reserve(
+        &self,
+        request: &crate::PoseObservationRequest,
+        authorized: bool,
+    ) -> Result<(), String> {
+        if !authorized {
+            return Err("SESSION_CONFLICT".into());
+        }
+        let mut state = self.0.lock().map_err(|_| "INTERNAL".to_owned())?;
+        if state.seen_ids.contains(&request.request_id) {
+            return Err("DUPLICATE_REQUEST_ID".into());
+        }
+        if state.seen_ids.len() >= MAX_AUTHORING_REQUEST_IDS {
+            return Err("SESSION_CONFLICT".into());
+        }
+        if state
+            .last_sequence
+            .get(&request.session_id)
+            .is_some_and(|last| request.sequence <= *last)
+        {
+            return Err("SESSION_CONFLICT".into());
+        }
+        if state
+            .last_sequence
+            .keys()
+            .any(|session| session != &request.session_id)
+        {
+            return Err("SESSION_CONFLICT".into());
+        }
+        state.seen_ids.insert(request.request_id.clone());
+        state
+            .last_sequence
+            .insert(request.session_id.clone(), request.sequence);
+        Ok(())
+    }
+
+    fn clear_session(&self, session_id: &str) {
+        if let Ok(mut state) = self.0.lock() {
+            state.last_sequence.remove(session_id);
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -137,6 +196,14 @@ pub struct McpHost {
     owner_uid: u32,
 }
 
+#[derive(Clone)]
+struct HostServices {
+    store: SnapshotStore,
+    authoring_handler: Option<AuthoringHandler>,
+    observation_handler: Option<PoseObservationHandler>,
+    image_chunk_handler: Option<PoseImageChunkHandler>,
+}
+
 impl McpHost {
     pub fn start(store: SnapshotStore) -> Result<Self, HostError> {
         Self::start_with_authoring(store, None)
@@ -146,8 +213,23 @@ impl McpHost {
         store: SnapshotStore,
         authoring_handler: Option<AuthoringHandler>,
     ) -> Result<Self, HostError> {
+        Self::start_with_handlers(store, authoring_handler, None, None)
+    }
+
+    pub fn start_with_handlers(
+        store: SnapshotStore,
+        authoring_handler: Option<AuthoringHandler>,
+        observation_handler: Option<PoseObservationHandler>,
+        image_chunk_handler: Option<PoseImageChunkHandler>,
+    ) -> Result<Self, HostError> {
         let root = runtime_directory().ok_or(HostError::RuntimeDirectory)?;
-        Self::start_at_with_authoring(root, store, authoring_handler)
+        Self::start_at_with_handlers(
+            root,
+            store,
+            authoring_handler,
+            observation_handler,
+            image_chunk_handler,
+        )
     }
 
     #[cfg(test)]
@@ -155,10 +237,21 @@ impl McpHost {
         Self::start_at_with_authoring(root, store, None)
     }
 
+    #[cfg(test)]
     fn start_at_with_authoring(
         root: PathBuf,
         store: SnapshotStore,
         authoring_handler: Option<AuthoringHandler>,
+    ) -> Result<Self, HostError> {
+        Self::start_at_with_handlers(root, store, authoring_handler, None, None)
+    }
+
+    fn start_at_with_handlers(
+        root: PathBuf,
+        store: SnapshotStore,
+        authoring_handler: Option<AuthoringHandler>,
+        observation_handler: Option<PoseObservationHandler>,
+        image_chunk_handler: Option<PoseImageChunkHandler>,
     ) -> Result<Self, HostError> {
         let root_meta = fs::symlink_metadata(&root).map_err(|_| HostError::RuntimeDirectory)?;
         if !root_meta.is_dir()
@@ -206,6 +299,12 @@ impl McpHost {
         let stop = Arc::new(AtomicBool::new(false));
         let thread_stop = stop.clone();
         let thread_endpoint = endpoint.clone();
+        let services = HostServices {
+            store,
+            authoring_handler,
+            observation_handler,
+            image_chunk_handler,
+        };
         let thread = thread::Builder::new()
             .name("m2m-mcp-ipc".into())
             .spawn(move || {
@@ -221,14 +320,7 @@ impl McpHost {
                 };
                 runtime.block_on(async move {
                     if let Ok(listener) = UnixListener::from_std(listener) {
-                        serve(
-                            listener,
-                            store,
-                            authoring_handler,
-                            thread_stop,
-                            expected_uid,
-                        )
-                        .await;
+                        serve(listener, services, thread_stop, expected_uid).await;
                     }
                 });
                 let _ = fs::remove_file(&thread_endpoint);
@@ -284,14 +376,14 @@ impl Drop for McpHost {
 
 async fn serve(
     listener: UnixListener,
-    store: SnapshotStore,
-    authoring_handler: Option<AuthoringHandler>,
+    services: HostServices,
     stop: Arc<AtomicBool>,
     expected_uid: u32,
 ) {
     let permits = Arc::new(Semaphore::new(16));
     let authoring_slot = Arc::new(Semaphore::new(1));
     let authoring_guard = AuthoringGuard::default();
+    let observation_guard = ObservationGuard::default();
     loop {
         if stop.load(Ordering::Acquire) {
             break;
@@ -303,18 +395,18 @@ async fn serve(
         let Ok(permit) = permits.clone().try_acquire_owned() else {
             continue;
         };
-        let store = store.clone();
-        let authoring_handler = authoring_handler.clone();
+        let services = services.clone();
         let authoring_slot = authoring_slot.clone();
         let authoring_guard = authoring_guard.clone();
+        let observation_guard = observation_guard.clone();
         tokio::spawn(async move {
             let _permit = permit;
             let _ = serve_client(
                 stream,
-                store,
-                authoring_handler,
+                services,
                 authoring_slot,
                 authoring_guard,
+                observation_guard,
                 expected_uid,
             )
             .await;
@@ -324,12 +416,18 @@ async fn serve(
 
 async fn serve_client(
     mut stream: UnixStream,
-    store: SnapshotStore,
-    authoring_handler: Option<AuthoringHandler>,
+    services: HostServices,
     authoring_slot: Arc<Semaphore>,
     authoring_guard: AuthoringGuard,
+    observation_guard: ObservationGuard,
     expected_uid: u32,
 ) -> std::io::Result<()> {
+    let HostServices {
+        store,
+        authoring_handler,
+        observation_handler,
+        image_chunk_handler,
+    } = services;
     let peer_uid = stream.peer_cred()?.uid();
     let mut prefix = [0_u8; 4];
     timeout(Duration::from_millis(500), stream.read_exact(&mut prefix))
@@ -412,6 +510,11 @@ async fn serve_client(
                             };
                             if let Some(authoring_response) = response.authoring_response.as_ref() {
                                 authoring_guard.finish(&bridge_request, authoring_response);
+                                if bridge_request.operation == AuthoringOperation::SessionCancel
+                                    && authoring_response.ok
+                                {
+                                    observation_guard.clear_session(&bridge_request.session_id);
+                                }
                             }
                             response
                         }
@@ -431,6 +534,81 @@ async fn serve_client(
                             "native authoring bridge is disabled",
                         )),
                     )
+                }
+            }
+            IpcMethod::PoseObservationRequest {
+                request: pose_request,
+            } => {
+                if let Err(error) = pose_request.validate() {
+                    IpcResponse::pose_observation(
+                        request.request_id,
+                        pose_request.error_response(error),
+                    )
+                } else if let Err(code) = observation_guard.reserve(
+                    &pose_request,
+                    authoring_guard.authorizes(&pose_request.session_id),
+                ) {
+                    IpcResponse::pose_observation(
+                        request.request_id,
+                        pose_request.error_response(
+                            pose_request
+                                .error(&code, "observation request is replayed or unauthorized"),
+                        ),
+                    )
+                } else if let Some(handler) = observation_handler {
+                    match authoring_slot.clone().try_acquire_owned() {
+                        Ok(_slot) => {
+                            let deadline = Duration::from_millis(pose_request.deadline_ms as u64);
+                            let in_flight = handler(pose_request.clone());
+                            tokio::select! {
+                                result = timeout(deadline, in_flight) => match result {
+                                    Ok(response) if pose_request.validate_response(&response) => {
+                                        IpcResponse::pose_observation(request.request_id, response)
+                                    }
+                                    Ok(_) => IpcResponse::pose_observation(request.request_id, pose_request.error_response(pose_request.error("INTERNAL", "frontend observation response correlation failed"))),
+                                    Err(_) => IpcResponse::pose_observation(request.request_id, pose_request.error_response(pose_request.error("DEADLINE_EXCEEDED", "observation exceeded its request deadline"))),
+                                },
+                                _ = wait_for_client_close(&mut stream) => {
+                                    return Ok(());
+                                },
+                            }
+                        }
+                        Err(_) => IpcResponse::pose_observation(
+                            request.request_id,
+                            pose_request.error_response(pose_request.error(
+                                "RESOURCE_LIMIT_EXCEEDED",
+                                "another native bridge request is in flight",
+                            )),
+                        ),
+                    }
+                } else {
+                    IpcResponse::pose_observation(
+                        request.request_id,
+                        pose_request.error_response(pose_request.error(
+                            "RIG_UNAVAILABLE",
+                            "native observation bridge is unavailable",
+                        )),
+                    )
+                }
+            }
+            IpcMethod::PoseImageChunkRequest {
+                request: chunk_request,
+            } => {
+                if chunk_request.validate().is_err()
+                    || !authoring_guard.authorizes(&chunk_request.session_id)
+                {
+                    IpcResponse::error(request.request_id, IpcErrorCode::PermissionDenied)
+                } else if let Some(handler) = image_chunk_handler {
+                    let deadline = Duration::from_secs(30);
+                    let in_flight = handler(chunk_request);
+                    match timeout(deadline, in_flight).await {
+                        Ok(Some(response)) => {
+                            IpcResponse::pose_image_chunk(request.request_id, response)
+                        }
+                        _ => IpcResponse::error(request.request_id, IpcErrorCode::AppUnavailable),
+                    }
+                } else {
+                    IpcResponse::error(request.request_id, IpcErrorCode::AppUnavailable)
                 }
             }
         }
@@ -640,6 +818,155 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn observation_and_image_chunks_share_authorized_session_and_private_ipc() {
+        use crate::{
+            AppSnapshotSource, PoseImageChunkResponse, PoseObservationRequest,
+            PoseObservationResponse,
+        };
+
+        let path = private_runtime();
+        let authoring_handler: AuthoringHandler = Arc::new(|request| {
+            Box::pin(async move { request.success_response(serde_json::json!({"revision":1})) })
+        });
+        let observation_handler: PoseObservationHandler = Arc::new(|request| {
+            Box::pin(async move {
+                PoseObservationResponse::success(
+                    &request,
+                    serde_json::json!({"capture_id":"opaque","revision":1}),
+                )
+            })
+        });
+        let image_handler: PoseImageChunkHandler = Arc::new(|request| {
+            Box::pin(async move {
+                Some(PoseImageChunkResponse {
+                    request_id: request.request_id,
+                    session_id: request.session_id,
+                    capture_id: request.capture_id,
+                    image_ref: request.image_ref,
+                    view: request.view,
+                    offset: request.offset,
+                    mime: "image/png".into(),
+                    total_bytes: 4,
+                    bytes_base64: "AQIDBA==".into(),
+                })
+            })
+        });
+        let host = McpHost::start_at_with_handlers(
+            path.clone(),
+            SnapshotStore::default(),
+            Some(authoring_handler),
+            Some(observation_handler),
+            Some(image_handler),
+        )
+        .unwrap();
+        let client = crate::IpcClient::with_endpoint(host.endpoint().to_string_lossy());
+        client
+            .authoring_request(sample_authoring_request())
+            .await
+            .unwrap();
+
+        let pose_request = PoseObservationRequest {
+            protocol: crate::POSE_OBSERVATION_PROTOCOL.into(),
+            request_id: "caller-pose".into(),
+            session_id: "session-1".into(),
+            sequence: 1,
+            deadline_ms: 1_000,
+            operation: crate::PoseObservationOperation::Capture,
+            payload: serde_json::json!({"draft_id":"session-1"}),
+        };
+        let pose_response = client
+            .pose_observation_request(pose_request.clone())
+            .await
+            .unwrap();
+        assert!(pose_request.validate_response(&pose_response));
+        assert_eq!(pose_response.result.unwrap()["capture_id"], "opaque");
+
+        let image_request = crate::PoseImageChunkRequest {
+            request_id: "image-1".into(),
+            session_id: "session-1".into(),
+            capture_id: "opaque".into(),
+            image_ref: "opaque:front".into(),
+            view: "front".into(),
+            offset: 0,
+            max_bytes: 4,
+        };
+        let image_response = client
+            .pose_image_chunk(image_request.clone())
+            .await
+            .unwrap();
+        assert!(image_request.validate_response(&image_response));
+        drop(host);
+        let _ = fs::remove_dir_all(path);
+    }
+
+    #[tokio::test]
+    async fn observation_disconnect_drops_the_pending_frontend_capture_future() {
+        use crate::{AppSnapshotSource, PoseObservationRequest, PoseObservationResponse};
+        use std::sync::atomic::AtomicBool;
+
+        struct DropMarker(Arc<AtomicBool>);
+        impl Drop for DropMarker {
+            fn drop(&mut self) {
+                self.0.store(true, Ordering::Release);
+            }
+        }
+
+        let path = private_runtime();
+        let dropped = Arc::new(AtomicBool::new(false));
+        let authoring_handler: AuthoringHandler = Arc::new(|request| {
+            Box::pin(async move { request.success_response(serde_json::json!({"revision":1})) })
+        });
+        let drop_flag = dropped.clone();
+        let observation_handler: PoseObservationHandler = Arc::new(move |_request| {
+            let marker = DropMarker(drop_flag.clone());
+            Box::pin(async move {
+                let _marker = marker;
+                std::future::pending::<PoseObservationResponse>().await
+            })
+        });
+        let host = McpHost::start_at_with_handlers(
+            path.clone(),
+            SnapshotStore::default(),
+            Some(authoring_handler),
+            Some(observation_handler),
+            None,
+        )
+        .unwrap();
+        let client = crate::IpcClient::with_endpoint(host.endpoint().to_string_lossy());
+        client
+            .authoring_request(sample_authoring_request())
+            .await
+            .unwrap();
+        let request = PoseObservationRequest {
+            protocol: crate::POSE_OBSERVATION_PROTOCOL.into(),
+            request_id: "disconnect-pose".into(),
+            session_id: "session-1".into(),
+            sequence: 1,
+            deadline_ms: 10_000,
+            operation: crate::PoseObservationOperation::Capture,
+            payload: serde_json::json!({}),
+        };
+        let call = tokio::spawn({
+            let client = client.clone();
+            async move { client.pose_observation_request(request).await }
+        });
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        call.abort();
+        for _ in 0..20 {
+            if dropped.load(Ordering::Acquire) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+        assert!(
+            dropped.load(Ordering::Acquire),
+            "client disconnect must cancel the active capture future"
+        );
+        drop(host);
+        let _ = fs::remove_dir_all(path);
+    }
+
     #[test]
     fn replay_guard_enforces_unique_ids_sequence_session_and_bounded_capacity() {
         let guard = AuthoringGuard::default();
@@ -678,6 +1005,40 @@ mod tests {
         assert_eq!(
             guard.reserve(&next),
             Err(AuthoringErrorCode::SessionConflict)
+        );
+    }
+
+    #[test]
+    fn observation_guard_rejects_unauthorized_duplicate_stale_and_cross_session_requests() {
+        let guard = ObservationGuard::default();
+        let request = crate::PoseObservationRequest {
+            protocol: crate::POSE_OBSERVATION_PROTOCOL.into(),
+            request_id: "pose-1".into(),
+            session_id: "session-1".into(),
+            sequence: 1,
+            deadline_ms: 1_000,
+            operation: crate::PoseObservationOperation::Capture,
+            payload: serde_json::json!({}),
+        };
+        assert_eq!(
+            guard.reserve(&request, false),
+            Err("SESSION_CONFLICT".into())
+        );
+        assert_eq!(guard.reserve(&request, true), Ok(()));
+        assert_eq!(
+            guard.reserve(&request, true),
+            Err("DUPLICATE_REQUEST_ID".into())
+        );
+        let mut stale = request.clone();
+        stale.request_id = "pose-stale".into();
+        assert_eq!(guard.reserve(&stale, true), Err("SESSION_CONFLICT".into()));
+        let mut foreign = request;
+        foreign.request_id = "pose-foreign".into();
+        foreign.session_id = "session-2".into();
+        foreign.sequence = 1;
+        assert_eq!(
+            guard.reserve(&foreign, true),
+            Err("SESSION_CONFLICT".into())
         );
     }
 
