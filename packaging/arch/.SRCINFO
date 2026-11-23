@@ -14,7 +14,7 @@ pkgbase = mesh2motion-git
 	makedepends = openssl
 	makedepends = rust>=1.88
 	makedepends = pkgconf
-	source = mesh2motion::git+https://github.com/Mesh2Motion/mesh2motion-desktop.git#commit=17b487daeaebf27038771fe20fd33fdba6165c75
+	source = mesh2motion::git+https://github.com/Mesh2Motion/mesh2motion-desktop.git#commit=714c6f48edd40b6b0f3b2f8ad649aed7141c279b
 	source = frontend::git+https://github.com/Mesh2Motion/mesh2motion-app.git#commit=921b1dbbdb375dfe392d4d35f99059e4f43e48a1
 	source = mesh2motion.desktop
 	source = mesh2motion-launcher

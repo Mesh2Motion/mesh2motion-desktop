@@ -8,7 +8,7 @@ url='https://github.com/Mesh2Motion/mesh2motion-desktop'
 license=('MIT' 'CC0-1.0')
 makedepends=('git' 'gtk3' 'webkit2gtk-4.1' 'nodejs' 'npm' 'openssl' 'rust>=1.88' 'pkgconf')
 
-_desktop_commit='17b487daeaebf27038771fe20fd33fdba6165c75'
+_desktop_commit='714c6f48edd40b6b0f3b2f8ad649aed7141c279b'
 _frontend_commit='921b1dbbdb375dfe392d4d35f99059e4f43e48a1'
 _desktop_repo="${M2M_DESKTOP_GIT_URL:-https://github.com/Mesh2Motion/mesh2motion-desktop.git}"
 _frontend_repo="${M2M_FRONTEND_GIT_URL:-https://github.com/Mesh2Motion/mesh2motion-app.git}"
