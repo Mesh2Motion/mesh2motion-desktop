@@ -223,6 +223,12 @@ struct BridgeWait {
     bridge: Arc<AuthoringBridgeState>,
     request_id: String,
     session_id: String,
+    completed: bool,
+}
+
+#[cfg(feature = "mcp-host")]
+fn should_cancel_authoring_wait(completed: bool) -> bool {
+    !completed
 }
 
 #[cfg(feature = "mcp-host")]
@@ -230,10 +236,12 @@ impl Future for BridgeWait {
     type Output = AuthoringResponse;
 
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
-        let Ok(mut state) = self.state.lock() else {
+        let this = self.get_mut();
+        let Ok(mut state) = this.state.lock() else {
             return Poll::Pending;
         };
         if let Some(response) = state.result.take() {
+            this.completed = true;
             return Poll::Ready(response);
         }
         state.waker = Some(context.waker().clone());
@@ -244,6 +252,9 @@ impl Future for BridgeWait {
 #[cfg(feature = "mcp-host")]
 impl Drop for BridgeWait {
     fn drop(&mut self) {
+        if !should_cancel_authoring_wait(self.completed) {
+            return;
+        }
         self.cancelled.store(true, Ordering::Release);
         let _ = self.bridge.app.emit(
             "m2m-authoring-cancel",
@@ -362,6 +373,7 @@ fn make_authoring_handler(state: &Arc<AuthoringBridgeState>) -> AuthoringHandler
             bridge: state,
             request_id: request.request_id,
             session_id: request.session_id,
+            completed: false,
         })
     })
 }
@@ -930,7 +942,7 @@ pub fn run() {
 #[cfg(test)]
 mod contract_tests {
     #[cfg(feature = "mcp-host")]
-    use super::mcp_operation_grants_authoring;
+    use super::{mcp_operation_grants_authoring, should_cancel_authoring_wait};
     use super::{preview_asset_relative_path, McpHostStatus};
     #[cfg(feature = "mcp-host")]
     use mesh2motion_mcp::AuthoringOperation;
@@ -947,6 +959,13 @@ mod contract_tests {
         assert!(mcp_operation_grants_authoring(
             AuthoringOperation::DraftCreate
         ));
+    }
+
+    #[cfg(feature = "mcp-host")]
+    #[test]
+    fn completed_authoring_response_drop_does_not_cancel_the_session() {
+        assert!(!should_cancel_authoring_wait(true));
+        assert!(should_cancel_authoring_wait(false));
     }
 
     #[test]
