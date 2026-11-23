@@ -42,7 +42,7 @@ build() {
 
   # Keep makepkg's temporary $srcdir out of compiler/debug path metadata.
   # Cargo's encoded flag form preserves spaces in the user's home path.
-  export CARGO_ENCODED_RUSTFLAGS="--remap-path-prefix=${srcdir}=/usr/src/mesh2motion"
+  export CARGO_ENCODED_RUSTFLAGS="--remap-path-prefix=${srcdir}=/usr/src/mesh2motion"$'\x1f'"--remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}=/usr/src/cargo-home"
 
   cd "${tree}/mesh2motion-app"
   npm ci --ignore-scripts --no-audit --no-fund
@@ -50,7 +50,7 @@ build() {
   npm run build
 
   CARGO_TARGET_DIR="$target" cargo build --locked --release \
-    --features mcp-host \
+    --features mcp-host,custom-protocol \
     --manifest-path "${tree}/src-tauri/Cargo.toml"
   CARGO_TARGET_DIR="$target" cargo build --locked --release \
     --manifest-path "${tree}/src-tauri/mcp-server/Cargo.toml"

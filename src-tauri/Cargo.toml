@@ -8,6 +8,7 @@ edition = "2021"
 [features]
 default = []
 mcp-host = ["dep:mesh2motion-mcp", "mesh2motion-mcp/ipc-host"]
+custom-protocol = ["tauri/custom-protocol"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
