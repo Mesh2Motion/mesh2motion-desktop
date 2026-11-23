@@ -23,7 +23,7 @@ pkgbase = mesh2motion-git
 	sha256sums = SKIP
 	sha256sums = e125a2736b0fef332bdc7e86ecee10f64d82d10071a65fe593a3bfe1885033be
 	sha256sums = 9e0ac374a936bd27e912ab53f58acf17ed34c03131abd4fd5c8511e1a439e06f
-	sha256sums = 628b5bcd33efcbabf8461c573d78846242dcafff7b5b80de4b06391ce9502c16
+	sha256sums = 02ccbf99aff19b092dbae1f8da1680664680a71ee69147ef68160c79c6a8dffb
 
 pkgname = mesh2motion-git
 	depends = gtk3
