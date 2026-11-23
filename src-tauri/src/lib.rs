@@ -256,7 +256,7 @@ fn make_authoring_handler(state: &Arc<AuthoringBridgeState>) -> AuthoringHandler
         let Some(state) = state.upgrade() else {
             return Box::pin(async move {
                 request.error_response(request.error(
-                    AuthoringErrorCode::Internal,
+                    AuthoringErrorCode::AppDisconnected,
                     "native application is shutting down",
                 ))
             });
@@ -264,7 +264,7 @@ fn make_authoring_handler(state: &Arc<AuthoringBridgeState>) -> AuthoringHandler
         if !state.is_enabled() && request.operation != AuthoringOperation::RigCatalogGet {
             return Box::pin(async move {
                 request.error_response(request.error(
-                    AuthoringErrorCode::BadRequest,
+                    AuthoringErrorCode::AuthoringDisabled,
                     "authoring requires explicit native opt-in",
                 ))
             });
@@ -312,7 +312,7 @@ fn make_authoring_handler(state: &Arc<AuthoringBridgeState>) -> AuthoringHandler
             }
             return Box::pin(async move {
                 request.error_response(request.error(
-                    AuthoringErrorCode::Internal,
+                    AuthoringErrorCode::AppDisconnected,
                     "frontend bridge is unavailable",
                 ))
             });

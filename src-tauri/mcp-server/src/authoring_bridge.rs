@@ -83,6 +83,8 @@ pub enum AuthoringErrorCode {
     CommitFailed,
     UndoFailed,
     Internal,
+    AuthoringDisabled,
+    AppDisconnected,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -244,6 +246,30 @@ mod tests {
         assert_eq!(
             value.validate().unwrap_err().code,
             AuthoringErrorCode::BadRequest
+        );
+    }
+
+    #[test]
+    fn matches_frontend_envelope_id_bytes_and_closed_error_codes() {
+        let mut oversized_utf8_id = request();
+        oversized_utf8_id.request_id = "€".repeat(22);
+        assert_eq!(
+            oversized_utf8_id.validate().unwrap_err().code,
+            AuthoringErrorCode::BadRequest
+        );
+
+        let mut envelope: serde_json::Value =
+            serde_json::from_str(&serde_json::to_string(&request()).unwrap()).unwrap();
+        envelope["unexpected"] = json!(true);
+        assert!(serde_json::from_value::<AuthoringRequest>(envelope).is_err());
+
+        assert_eq!(
+            serde_json::to_value(AuthoringErrorCode::AuthoringDisabled).unwrap(),
+            json!("AUTHORING_DISABLED")
+        );
+        assert_eq!(
+            serde_json::to_value(AuthoringErrorCode::AppDisconnected).unwrap(),
+            json!("APP_DISCONNECTED")
         );
     }
 

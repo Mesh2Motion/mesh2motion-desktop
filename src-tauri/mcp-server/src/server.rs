@@ -137,11 +137,6 @@ impl Mesh2MotionMcp {
                     .error
                     .map(|error| (authoring_error_code(error.code), error.message))
                     .unwrap_or(("INTERNAL", "native authoring request failed".to_owned()));
-                let code = if code == "BAD_REQUEST" && message.contains("authoring") {
-                    "AUTHORING_DISABLED"
-                } else {
-                    code
-                };
                 Json(ToolEnvelope::failure(code, &message, false, None))
             }
             Ok(_) => Json(ToolEnvelope::ipc_error()),
@@ -169,6 +164,8 @@ fn authoring_error_code(code: AuthoringErrorCode) -> &'static str {
         AuthoringErrorCode::CommitFailed => "COMMIT_FAILED",
         AuthoringErrorCode::UndoFailed => "UNDO_FAILED",
         AuthoringErrorCode::Internal => "INTERNAL",
+        AuthoringErrorCode::AuthoringDisabled => "AUTHORING_DISABLED",
+        AuthoringErrorCode::AppDisconnected => "APP_DISCONNECTED",
     }
 }
 
