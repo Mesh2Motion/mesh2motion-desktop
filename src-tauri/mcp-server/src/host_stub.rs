@@ -1,4 +1,4 @@
-use crate::SnapshotStore;
+use crate::{AuthoringHandler, SnapshotStore};
 
 #[derive(Debug)]
 pub struct HostError;
@@ -7,6 +7,12 @@ pub struct McpHost;
 
 impl McpHost {
     pub fn start(_store: SnapshotStore) -> Result<Self, HostError> {
+        Err(HostError)
+    }
+    pub fn start_with_authoring(
+        _store: SnapshotStore,
+        _authoring_handler: Option<AuthoringHandler>,
+    ) -> Result<Self, HostError> {
         Err(HostError)
     }
     pub fn endpoint(&self) -> &std::path::Path {

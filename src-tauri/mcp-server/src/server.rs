@@ -8,8 +8,9 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::{
-    AnimationInfo, AnimationOrigin, AppPhase, AppSnapshotSource, ControlSnapshot, IpcError,
-    RendererInfo, RigInfo, SceneInfo, SnapshotInfo, ToolEnvelope,
+    AnimationInfo, AnimationOrigin, AppPhase, AppSnapshotSource, AuthoringOperation,
+    AuthoringRequest, ControlSnapshot, IpcError, RendererInfo, RigInfo, SceneInfo, SnapshotInfo,
+    ToolEnvelope, ToolError, AUTHORING_BRIDGE_PROTOCOL,
 };
 
 #[derive(Clone)]
@@ -36,6 +37,148 @@ impl Mesh2MotionMcp {
         }
         result
     }
+
+    async fn read_live_catalog(&self) -> Result<serde_json::Value, IpcError> {
+        let session_id = format!(
+            "catalog-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        );
+        let request = AuthoringRequest {
+            protocol: AUTHORING_BRIDGE_PROTOCOL.to_owned(),
+            request_id: "catalog-request".to_owned(),
+            session_id,
+            sequence: 1,
+            deadline_ms: 5_000,
+            operation: AuthoringOperation::RigCatalogGet,
+            payload: serde_json::json!({}),
+        };
+        let response = self.source.authoring_request(request).await?;
+        if response.ok {
+            response.result.ok_or(IpcError::InvalidResponse)
+        } else {
+            match response.error.map(|error| error.code) {
+                Some(crate::AuthoringErrorCode::AuthoringDisabled) => {
+                    Err(IpcError::AuthoringDisabled)
+                }
+                Some(crate::AuthoringErrorCode::DeadlineExceeded) => {
+                    Err(IpcError::DeadlineExceeded)
+                }
+                Some(crate::AuthoringErrorCode::AppDisconnected) => Err(IpcError::Disconnected),
+                _ => Err(IpcError::InvalidResponse),
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod live_catalog_tests {
+    use super::*;
+
+    fn catalog() -> LiveRigCatalogData {
+        LiveRigCatalogData {
+            rig: LiveRigIdentity {
+                identifier: "human".to_owned(),
+                fingerprint: "a".repeat(64),
+            },
+            bones: vec![LiveBoneData {
+                id: "human:bone:000".to_owned(),
+                display_name: "root".to_owned(),
+                index: 0,
+                parent_id: None,
+                local_position: [0.0, 0.0, 0.0],
+                local_quaternion: [0.0, 0.0, 0.0, 1.0],
+                local_scale: [1.0, 1.0, 1.0],
+            }],
+        }
+    }
+
+    #[test]
+    fn live_catalog_requires_a_real_shaped_fingerprint_and_normalized_bones() {
+        assert!(catalog().is_well_formed());
+        let mut invalid = catalog();
+        invalid.bones[0].local_quaternion = [0.0, 0.0, 0.0, 2.0];
+        assert!(!invalid.is_well_formed());
+        let mut invalid = catalog();
+        invalid.rig.fingerprint = "fixture".to_owned();
+        assert!(!invalid.is_well_formed());
+        let mut invalid = catalog();
+        invalid.bones[0].parent_id = Some("missing".to_owned());
+        assert!(!invalid.is_well_formed());
+    }
+}
+
+impl LiveRigCatalogData {
+    fn is_well_formed(&self) -> bool {
+        use std::collections::HashSet;
+        if self.rig.identifier.trim().is_empty()
+            || self.rig.fingerprint.len() != 64
+            || !self
+                .rig
+                .fingerprint
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit())
+            || self.bones.is_empty()
+            || self.bones.len() > crate::MAX_BONES
+        {
+            return false;
+        }
+        let mut ids = HashSet::new();
+        let mut indices = HashSet::new();
+        if self.bones.iter().any(|bone| {
+            bone.id.trim().is_empty()
+                || !ids.insert(bone.id.as_str())
+                || !indices.insert(bone.index)
+                || bone.local_position.iter().any(|value| !value.is_finite())
+                || bone.local_scale.iter().any(|value| !value.is_finite())
+                || bone.local_quaternion.iter().any(|value| !value.is_finite())
+                || (bone
+                    .local_quaternion
+                    .iter()
+                    .map(|value| value * value)
+                    .sum::<f64>()
+                    .sqrt()
+                    - 1.0)
+                    .abs()
+                    > 1e-4
+        }) {
+            return false;
+        }
+        self.bones.iter().all(|bone| {
+            bone.parent_id
+                .as_ref()
+                .is_none_or(|parent_id| parent_id != &bone.id && ids.contains(parent_id.as_str()))
+        })
+    }
+}
+
+#[derive(Clone, Debug, serde::Deserialize, JsonSchema, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct LiveRigCatalogData {
+    pub rig: LiveRigIdentity,
+    pub bones: Vec<LiveBoneData>,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, JsonSchema, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct LiveRigIdentity {
+    pub identifier: String,
+    pub fingerprint: String,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, JsonSchema, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct LiveBoneData {
+    pub id: String,
+    pub display_name: String,
+    pub index: u16,
+    pub parent_id: Option<String>,
+    pub local_position: [f64; 3],
+    pub local_quaternion: [f64; 4],
+    pub local_scale: [f64; 3],
 }
 
 #[derive(Clone, Debug, Default, Deserialize, JsonSchema)]
@@ -367,6 +510,38 @@ impl Mesh2MotionMcp {
             Err(error) => Json(error_envelope(error)),
         }
     }
+
+    #[tool(
+        name = "skeleton_get_catalog",
+        description = "Read the current live rig and bone catalog from the native Three.js skeleton."
+    )]
+    pub async fn skeleton_get_catalog(
+        &self,
+        Parameters(_args): Parameters<RendererStateArgs>,
+    ) -> Json<ToolEnvelope<LiveRigCatalogData>> {
+        match self.read_live_catalog().await {
+            Ok(value) => match serde_json::from_value::<LiveRigCatalogData>(value) {
+                Ok(data) if data.is_well_formed() => Json(ToolEnvelope {
+                    ok: true,
+                    data: Some(data),
+                    error: None,
+                    meta: None,
+                }),
+                _ => Json(ToolEnvelope {
+                    ok: false,
+                    data: None,
+                    error: Some(ToolError {
+                        code: "INVALID_LIVE_CATALOG".to_owned(),
+                        message: "The native application returned an invalid live rig catalog."
+                            .to_owned(),
+                        retryable: false,
+                    }),
+                    meta: None,
+                }),
+            },
+            Err(error) => Json(error_envelope(error)),
+        }
+    }
 }
 
 fn freshness_error<T>(snapshot: &ControlSnapshot) -> Option<ToolEnvelope<T>> {
@@ -414,6 +589,18 @@ fn error_envelope<T>(error: IpcError) -> ToolEnvelope<T> {
             "PERMISSION_DENIED",
             "The local control peer did not pass same-user verification.",
             false,
+            None,
+        ),
+        IpcError::AuthoringDisabled => ToolEnvelope::failure(
+            "AUTHORING_DISABLED",
+            "Animation authoring is disabled in the native application.",
+            false,
+            None,
+        ),
+        IpcError::DeadlineExceeded => ToolEnvelope::failure(
+            "DEADLINE_EXCEEDED",
+            "The native application did not answer before the request deadline.",
+            true,
             None,
         ),
         IpcError::InvalidResponse => ToolEnvelope::ipc_error(),

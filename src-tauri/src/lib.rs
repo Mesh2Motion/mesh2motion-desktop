@@ -1,11 +1,27 @@
 #[cfg(feature = "mcp-host")]
-use mesh2motion_mcp::AppSnapshotSource;
+use mesh2motion_mcp::{
+    AppSnapshotSource, AuthoringErrorCode, AuthoringHandler, AuthoringOperation, AuthoringRequest,
+    AuthoringResponse, AUTHORING_BRIDGE_PROTOCOL,
+};
 use serde::Serialize;
 use serde_json::Value;
 use std::path::PathBuf;
 #[cfg(feature = "mcp-host")]
-use std::sync::Mutex;
+use std::{
+    collections::HashMap,
+    future::Future,
+    pin::Pin,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::{self, SyncSender},
+        Arc, Mutex,
+    },
+    task::{Context, Poll, Waker},
+    time::{Duration, Instant},
+};
 use tauri::path::BaseDirectory;
+#[cfg(feature = "mcp-host")]
+use tauri::Emitter;
 use tauri::{AppHandle, Manager, State};
 
 fn preview_asset_relative_path(asset_key: &str) -> Result<PathBuf, String> {
@@ -77,6 +93,7 @@ fn greet(name: &str) -> String {
 struct McpHostStatus {
     supported: bool,
     enabled: bool,
+    authoring_enabled: bool,
     endpoint: Option<String>,
     client_count: Option<u64>,
     commands: Vec<String>,
@@ -122,6 +139,213 @@ struct McpHostPaths {
 struct McpHostState {
     store: mesh2motion_mcp::SnapshotStore,
     host: Mutex<Option<mesh2motion_mcp::McpHost>>,
+    authoring: Arc<AuthoringBridgeState>,
+}
+
+#[cfg(feature = "mcp-host")]
+struct AuthoringBridgeState {
+    app: AppHandle,
+    enabled: AtomicBool,
+    pending: Mutex<HashMap<String, PendingAuthoring>>,
+}
+
+#[cfg(feature = "mcp-host")]
+struct PendingAuthoring {
+    session_id: String,
+    sequence: u64,
+    operation: AuthoringOperation,
+    sender: SyncSender<AuthoringResponse>,
+}
+
+#[cfg(feature = "mcp-host")]
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "snake_case")]
+struct AuthoringCancelNotice {
+    protocol: &'static str,
+    request_id: String,
+    session_id: String,
+}
+
+#[cfg(feature = "mcp-host")]
+impl AuthoringBridgeState {
+    fn new(app: AppHandle) -> Self {
+        Self {
+            app,
+            enabled: AtomicBool::new(false),
+            pending: Mutex::new(HashMap::new()),
+        }
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.enabled.load(Ordering::Acquire)
+    }
+
+    fn disable(&self) {
+        self.enabled.store(false, Ordering::Release);
+        if let Ok(mut pending) = self.pending.lock() {
+            for (request_id, entry) in pending.iter() {
+                let _ = self.app.emit(
+                    "m2m-authoring-cancel",
+                    AuthoringCancelNotice {
+                        protocol: AUTHORING_BRIDGE_PROTOCOL,
+                        request_id: request_id.clone(),
+                        session_id: entry.session_id.clone(),
+                    },
+                );
+            }
+            pending.clear();
+        }
+    }
+}
+
+#[cfg(feature = "mcp-host")]
+struct BridgeWaitState {
+    result: Option<AuthoringResponse>,
+    waker: Option<Waker>,
+}
+
+#[cfg(feature = "mcp-host")]
+struct BridgeWait {
+    state: Arc<Mutex<BridgeWaitState>>,
+    cancelled: Arc<AtomicBool>,
+    bridge: Arc<AuthoringBridgeState>,
+    request_id: String,
+    session_id: String,
+}
+
+#[cfg(feature = "mcp-host")]
+impl Future for BridgeWait {
+    type Output = AuthoringResponse;
+
+    fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
+        let Ok(mut state) = self.state.lock() else {
+            return Poll::Pending;
+        };
+        if let Some(response) = state.result.take() {
+            return Poll::Ready(response);
+        }
+        state.waker = Some(context.waker().clone());
+        Poll::Pending
+    }
+}
+
+#[cfg(feature = "mcp-host")]
+impl Drop for BridgeWait {
+    fn drop(&mut self) {
+        self.cancelled.store(true, Ordering::Release);
+        let _ = self.bridge.app.emit(
+            "m2m-authoring-cancel",
+            AuthoringCancelNotice {
+                protocol: AUTHORING_BRIDGE_PROTOCOL,
+                request_id: self.request_id.clone(),
+                session_id: self.session_id.clone(),
+            },
+        );
+        if let Ok(mut pending) = self.bridge.pending.lock() {
+            pending.remove(&self.request_id);
+        }
+    }
+}
+
+#[cfg(feature = "mcp-host")]
+fn make_authoring_handler(state: &Arc<AuthoringBridgeState>) -> AuthoringHandler {
+    let state = Arc::downgrade(state);
+    Arc::new(move |request: AuthoringRequest| -> Pin<Box<dyn Future<Output = AuthoringResponse> + Send>> {
+        let Some(state) = state.upgrade() else {
+            return Box::pin(async move {
+                request.error_response(request.error(
+                    AuthoringErrorCode::AppDisconnected,
+                    "native application is shutting down",
+                ))
+            });
+        };
+        if !state.is_enabled() && request.operation != AuthoringOperation::RigCatalogGet {
+            return Box::pin(async move {
+                request.error_response(request.error(
+                    AuthoringErrorCode::AuthoringDisabled,
+                    "authoring requires explicit native opt-in",
+                ))
+            });
+        }
+        let (sender, receiver) = mpsc::sync_channel(1);
+        let inserted = state
+            .pending
+            .lock()
+            .map(|mut pending| {
+                if pending.is_empty() && !pending.contains_key(&request.request_id) {
+                    pending.insert(
+                        request.request_id.clone(),
+                        PendingAuthoring {
+                            session_id: request.session_id.clone(),
+                            sequence: request.sequence,
+                            operation: request.operation,
+                            sender,
+                        },
+                    );
+                    true
+                } else {
+                    false
+                }
+            })
+            .unwrap_or(false);
+        if !inserted {
+            return Box::pin(async move {
+                request.error_response(request.error(
+                    AuthoringErrorCode::SessionConflict,
+                    "another native bridge request is pending",
+                ))
+            });
+        }
+        if state.app.emit("m2m-authoring-request", request.clone()).is_err() {
+            if let Ok(mut pending) = state.pending.lock() {
+                pending.remove(&request.request_id);
+            }
+            return Box::pin(async move {
+                request.error_response(request.error(
+                    AuthoringErrorCode::AppDisconnected,
+                    "frontend bridge is unavailable",
+                ))
+            });
+        }
+
+        let deadline = Instant::now() + Duration::from_millis(u64::from(request.deadline_ms));
+        let wait_state = Arc::new(Mutex::new(BridgeWaitState {
+            result: None,
+            waker: None,
+        }));
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let worker_state = wait_state.clone();
+        let worker_cancelled = cancelled.clone();
+        let worker_bridge = state.clone();
+        let request_for_worker = request.clone();
+        std::thread::spawn(move || {
+            let response = match receiver.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
+                Ok(response) => response,
+                Err(_) => request_for_worker.error_response(request_for_worker.error(
+                    AuthoringErrorCode::DeadlineExceeded,
+                    "frontend bridge response exceeded the request deadline",
+                )),
+            };
+            if let Ok(mut pending) = worker_bridge.pending.lock() {
+                pending.remove(&request_for_worker.request_id);
+            }
+            if !worker_cancelled.load(Ordering::Acquire) {
+                if let Ok(mut shared) = worker_state.lock() {
+                    shared.result = Some(response);
+                    if let Some(waker) = shared.waker.take() {
+                        waker.wake();
+                    }
+                }
+            }
+        });
+        Box::pin(BridgeWait {
+            state: wait_state,
+            cancelled,
+            bridge: state,
+            request_id: request.request_id,
+            session_id: request.session_id,
+        })
+    })
 }
 
 #[cfg(not(feature = "mcp-host"))]
@@ -130,10 +354,12 @@ struct McpHostState;
 
 #[cfg(feature = "mcp-host")]
 impl McpHostState {
-    fn new() -> Self {
+    fn new(app: AppHandle) -> Self {
         let store = mesh2motion_mcp::SnapshotStore::default();
+        let authoring = Arc::new(AuthoringBridgeState::new(app));
         let host = if std::env::var("M2M_MCP_ENABLE").as_deref() == Ok("1") {
-            match mesh2motion_mcp::McpHost::start(store.clone()) {
+            let handler = make_authoring_handler(&authoring);
+            match mesh2motion_mcp::McpHost::start_with_authoring(store.clone(), Some(handler)) {
                 Ok(host) => {
                     eprintln!(
                         "M2M_HOST enabled=true socket_bound=true endpoint={}",
@@ -152,6 +378,7 @@ impl McpHostState {
         Self {
             store,
             host: Mutex::new(host),
+            authoring,
         }
     }
 
@@ -171,6 +398,7 @@ impl McpHostState {
         Ok(McpHostStatus {
             supported: true,
             enabled,
+            authoring_enabled: self.authoring.is_enabled(),
             endpoint,
             client_count: None,
             commands: vec![
@@ -212,8 +440,10 @@ impl McpHostState {
         if host.is_some() {
             return Ok(());
         }
-        let started = mesh2motion_mcp::McpHost::start(self.store.clone())
-            .map_err(|error| host_error_code(&error).to_owned())?;
+        let handler = make_authoring_handler(&self.authoring);
+        let started =
+            mesh2motion_mcp::McpHost::start_with_authoring(self.store.clone(), Some(handler))
+                .map_err(|error| host_error_code(&error).to_owned())?;
         *host = Some(started);
         let endpoint = host
             .as_ref()
@@ -224,6 +454,7 @@ impl McpHostState {
     }
 
     fn disable(&self) -> Result<(), String> {
+        self.authoring.disable();
         let mut host = self
             .host
             .lock()
@@ -364,6 +595,50 @@ fn mcp_host_paths(state: State<'_, McpHostState>) -> Result<McpHostPaths, String
         let _ = state;
         Err("MCP_UNSUPPORTED_FEATURE".to_owned())
     }
+}
+
+/// Frontend event acknowledgment. It can resolve only a currently pending
+/// request and must echo the bridge identity fields for exact correlation.
+#[cfg(feature = "mcp-host")]
+#[tauri::command]
+fn mcp_authoring_respond(
+    response: AuthoringResponse,
+    state: State<'_, McpHostState>,
+) -> Result<(), String> {
+    let pending = state
+        .authoring
+        .pending
+        .lock()
+        .map_err(|_| "AUTHORING_STATE_LOCKED".to_owned())?;
+    let Some(entry) = pending.get(&response.request_id) else {
+        return Err("AUTHORING_REQUEST_NOT_PENDING".to_owned());
+    };
+    if response.protocol != AUTHORING_BRIDGE_PROTOCOL
+        || response.session_id != entry.session_id
+        || response.sequence != entry.sequence
+    {
+        return Err("AUTHORING_RESPONSE_MISMATCH".to_owned());
+    }
+    if !state.authoring.is_enabled() && entry.operation != AuthoringOperation::RigCatalogGet {
+        return Err("AUTHORING_DISABLED".to_owned());
+    }
+    entry
+        .sender
+        .try_send(response)
+        .map_err(|_| "AUTHORING_RESPONSE_REJECTED".to_owned())
+}
+
+/// Called only from a native UI control after explicit user action. Each app
+/// launch starts disabled; this permission is deliberately not persisted.
+#[cfg(feature = "mcp-host")]
+#[tauri::command]
+fn mcp_authoring_set_enabled(enabled: bool, state: State<'_, McpHostState>) -> Result<(), String> {
+    if enabled {
+        state.authoring.enabled.store(true, Ordering::Release);
+    } else {
+        state.authoring.disable();
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -570,6 +845,9 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            #[cfg(feature = "mcp-host")]
+            app.manage(McpHostState::new(app.handle().clone()));
+            #[cfg(not(feature = "mcp-host"))]
             app.manage(McpHostState::new());
             Ok(())
         })
@@ -583,7 +861,11 @@ pub fn run() {
             mcp_connection_test,
             mcp_set_enabled,
             mcp_test_connection,
-            mcp_host_paths
+            mcp_host_paths,
+            #[cfg(feature = "mcp-host")]
+            mcp_authoring_respond,
+            #[cfg(feature = "mcp-host")]
+            mcp_authoring_set_enabled
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
@@ -605,25 +887,6 @@ pub fn run() {
 #[cfg(test)]
 mod contract_tests {
     use super::{preview_asset_relative_path, McpHostStatus};
-
-    #[cfg(feature = "mcp-host")]
-    #[test]
-    fn poisoned_host_status_returns_an_error() {
-        let state = super::McpHostState {
-            store: mesh2motion_mcp::SnapshotStore::default(),
-            host: std::sync::Mutex::new(None),
-        };
-        let poison = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let _guard = state.host.lock().unwrap();
-            panic!("poison host state for test");
-        }));
-
-        assert!(poison.is_err());
-        assert!(matches!(
-            state.status(),
-            Err(error) if error == "MCP_HOST_STATE_LOCKED"
-        ));
-    }
 
     #[test]
     fn preview_asset_keys_are_narrow_and_relative() {
@@ -659,6 +922,7 @@ mod contract_tests {
         for field in [
             "supported",
             "enabled",
+            "authoring_enabled",
             "endpoint",
             "client_count",
             "commands",

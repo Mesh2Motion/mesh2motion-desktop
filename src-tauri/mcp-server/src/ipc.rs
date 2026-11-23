@@ -4,7 +4,7 @@ use std::{
     io,
     pin::Pin,
     sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
         Arc,
     },
     time::Duration,
@@ -16,10 +16,13 @@ use tokio::{
     time::timeout,
 };
 
-use crate::model::ControlSnapshot;
+use crate::{
+    authoring_bridge::{AuthoringRequest, AuthoringResponse, MAX_AUTHORING_REQUEST_BYTES},
+    model::ControlSnapshot,
+};
 
 pub const IPC_PROTOCOL_VERSION: u16 = 1;
-const IPC_MAX_FRAME_BYTES: usize = 256 * 1024;
+pub const IPC_MAX_FRAME_BYTES: usize = 256 * 1024;
 const IPC_TIMEOUT: Duration = Duration::from_millis(500);
 const IPC_ENDPOINT_ENV: &str = "M2M_MCP_IPC_ENDPOINT";
 
@@ -38,6 +41,7 @@ pub struct IpcRequest {
 #[serde(rename_all = "snake_case")]
 pub enum IpcMethod {
     SnapshotGet,
+    AuthoringRequest { request: AuthoringRequest },
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -46,6 +50,8 @@ pub struct IpcResponse {
     pub protocol_version: u16,
     pub request_id: u64,
     pub snapshot: Option<ControlSnapshot>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authoring_response: Option<AuthoringResponse>,
     pub error: Option<IpcErrorCode>,
 }
 
@@ -55,6 +61,17 @@ impl IpcResponse {
             protocol_version: IPC_PROTOCOL_VERSION,
             request_id,
             snapshot: Some(snapshot),
+            authoring_response: None,
+            error: None,
+        }
+    }
+
+    pub fn authoring(request_id: u64, response: AuthoringResponse) -> Self {
+        Self {
+            protocol_version: IPC_PROTOCOL_VERSION,
+            request_id,
+            snapshot: None,
+            authoring_response: Some(response),
             error: None,
         }
     }
@@ -64,6 +81,7 @@ impl IpcResponse {
             protocol_version: IPC_PROTOCOL_VERSION,
             request_id,
             snapshot: None,
+            authoring_response: None,
             error: Some(error),
         }
     }
@@ -77,6 +95,7 @@ pub enum IpcErrorCode {
     AppDisconnected,
     IncompatibleVersion,
     PermissionDenied,
+    AuthoringDisabled,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -88,13 +107,28 @@ pub enum IpcError {
     IncompatibleVersion,
     PermissionDenied,
     InvalidResponse,
+    AuthoringDisabled,
+    DeadlineExceeded,
 }
 
 pub type SnapshotFuture<'a> =
     Pin<Box<dyn Future<Output = Result<ControlSnapshot, IpcError>> + Send + 'a>>;
 
+pub type AuthoringFuture<'a> =
+    Pin<Box<dyn Future<Output = Result<AuthoringResponse, IpcError>> + Send + 'a>>;
+
+pub type AuthoringHandler = Arc<
+    dyn Fn(AuthoringRequest) -> Pin<Box<dyn Future<Output = AuthoringResponse> + Send>>
+        + Send
+        + Sync,
+>;
+
 pub trait AppSnapshotSource: Send + Sync {
     fn snapshot(&self) -> SnapshotFuture<'_>;
+
+    fn authoring_request(&self, _request: AuthoringRequest) -> AuthoringFuture<'_> {
+        Box::pin(async { Err(IpcError::AuthoringDisabled) })
+    }
 }
 
 /// Client for the one-request/one-response local IPC contract. An endpoint is
@@ -104,6 +138,8 @@ pub trait AppSnapshotSource: Send + Sync {
 pub struct IpcClient {
     endpoint: Option<String>,
     connected_once: Arc<AtomicBool>,
+    next_request_id: Arc<AtomicU64>,
+    next_authoring_sequence: Arc<AtomicU64>,
 }
 
 impl IpcClient {
@@ -113,6 +149,8 @@ impl IpcClient {
                 .ok()
                 .filter(|value| !value.is_empty()),
             connected_once: Arc::default(),
+            next_request_id: Arc::new(AtomicU64::new(0)),
+            next_authoring_sequence: Arc::new(AtomicU64::new(0)),
         }
     }
 
@@ -120,7 +158,15 @@ impl IpcClient {
         Self {
             endpoint: Some(endpoint.into()),
             connected_once: Arc::default(),
+            next_request_id: Arc::new(AtomicU64::new(0)),
+            next_authoring_sequence: Arc::new(AtomicU64::new(0)),
         }
+    }
+
+    fn next_request_id(&self) -> u64 {
+        self.next_request_id
+            .fetch_add(1, Ordering::Relaxed)
+            .saturating_add(1)
     }
 
     async fn request_snapshot(&self) -> Result<ControlSnapshot, IpcError> {
@@ -136,15 +182,16 @@ impl IpcClient {
 
         let request = IpcRequest {
             protocol_version: IPC_PROTOCOL_VERSION,
-            request_id: 1,
+            request_id: self.next_request_id(),
             method: IpcMethod::SnapshotGet,
         };
+        let request_id = request.request_id;
         let request_bytes = serde_json::to_vec(&request).map_err(|_| IpcError::InvalidResponse)?;
         write_frame(&mut stream, &request_bytes).await?;
         let response_bytes = read_frame(&mut stream).await?;
         let response: IpcResponse =
             serde_json::from_slice(&response_bytes).map_err(|_| IpcError::InvalidResponse)?;
-        if response.protocol_version != IPC_PROTOCOL_VERSION || response.request_id != 1 {
+        if response.protocol_version != IPC_PROTOCOL_VERSION || response.request_id != request_id {
             return Err(IpcError::IncompatibleVersion);
         }
         match (response.snapshot, response.error) {
@@ -161,11 +208,87 @@ impl IpcClient {
             _ => Err(IpcError::InvalidResponse),
         }
     }
+
+    async fn send_authoring(
+        &self,
+        mut bridge_request: AuthoringRequest,
+    ) -> Result<AuthoringResponse, IpcError> {
+        if !cfg!(unix) {
+            return Err(IpcError::AuthoringDisabled);
+        }
+        let request_id = self.next_request_id();
+        bridge_request.request_id = format!(
+            "mcp-{}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos(),
+            request_id
+        );
+        bridge_request.sequence = self
+            .next_authoring_sequence
+            .fetch_add(1, Ordering::Relaxed)
+            .saturating_add(1);
+        bridge_request
+            .validate()
+            .map_err(|_| IpcError::InvalidResponse)?;
+        let endpoint = self.endpoint.as_deref().ok_or(IpcError::Unavailable)?;
+        let mut stream = connect_stream(endpoint).await.map_err(|_| {
+            if self.connected_once.load(Ordering::Acquire) {
+                IpcError::Disconnected
+            } else {
+                IpcError::Unavailable
+            }
+        })?;
+        self.connected_once.store(true, Ordering::Release);
+
+        let request = IpcRequest {
+            protocol_version: IPC_PROTOCOL_VERSION,
+            request_id,
+            method: IpcMethod::AuthoringRequest {
+                request: bridge_request.clone(),
+            },
+        };
+        let request_bytes = serde_json::to_vec(&request).map_err(|_| IpcError::InvalidResponse)?;
+        if request_bytes.len() > IPC_MAX_FRAME_BYTES
+            || request_bytes.len() > MAX_AUTHORING_REQUEST_BYTES + 1024
+        {
+            return Err(IpcError::InvalidResponse);
+        }
+        write_frame(&mut stream, &request_bytes).await?;
+        let response_bytes = read_frame_with_timeout(
+            &mut stream,
+            Duration::from_millis(bridge_request.deadline_ms as u64 + 500),
+        )
+        .await?;
+        let response: IpcResponse =
+            serde_json::from_slice(&response_bytes).map_err(|_| IpcError::InvalidResponse)?;
+        if response.protocol_version != IPC_PROTOCOL_VERSION || response.request_id != request_id {
+            return Err(IpcError::IncompatibleVersion);
+        }
+        let Some(authoring_response) = response.authoring_response else {
+            return match response.error {
+                Some(IpcErrorCode::AuthoringDisabled) => Err(IpcError::AuthoringDisabled),
+                Some(IpcErrorCode::AppDisconnected) => Err(IpcError::Disconnected),
+                Some(IpcErrorCode::PermissionDenied) => Err(IpcError::PermissionDenied),
+                _ => Err(IpcError::InvalidResponse),
+            };
+        };
+        if !authoring_response.validate_for(&bridge_request) {
+            return Err(IpcError::InvalidResponse);
+        }
+        Ok(authoring_response)
+    }
 }
 
 impl AppSnapshotSource for IpcClient {
     fn snapshot(&self) -> SnapshotFuture<'_> {
         Box::pin(self.request_snapshot())
+    }
+
+    fn authoring_request(&self, request: AuthoringRequest) -> AuthoringFuture<'_> {
+        Box::pin(self.send_authoring(request))
     }
 }
 
@@ -231,7 +354,22 @@ async fn write_frame<W: AsyncWriteExt + Unpin>(
 }
 
 async fn read_frame<R: AsyncReadExt + Unpin>(reader: &mut R) -> Result<Vec<u8>, IpcError> {
-    timeout(IPC_TIMEOUT, async {
+    read_frame_inner(reader, IPC_TIMEOUT, IpcError::Disconnected).await
+}
+
+async fn read_frame_with_timeout<R: AsyncReadExt + Unpin>(
+    reader: &mut R,
+    duration: Duration,
+) -> Result<Vec<u8>, IpcError> {
+    read_frame_inner(reader, duration, IpcError::DeadlineExceeded).await
+}
+
+async fn read_frame_inner<R: AsyncReadExt + Unpin>(
+    reader: &mut R,
+    duration: Duration,
+    timeout_error: IpcError,
+) -> Result<Vec<u8>, IpcError> {
+    timeout(duration, async {
         let mut prefix = [0_u8; 4];
         reader.read_exact(&mut prefix).await?;
         let length = u32::from_be_bytes(prefix) as usize;
@@ -246,7 +384,7 @@ async fn read_frame<R: AsyncReadExt + Unpin>(reader: &mut R) -> Result<Vec<u8>, 
         Ok(payload)
     })
     .await
-    .map_err(|_| IpcError::Disconnected)?
+    .map_err(|_| timeout_error)?
     .map_err(|error| {
         if error.kind() == io::ErrorKind::InvalidData {
             IpcError::InvalidResponse
@@ -346,6 +484,7 @@ mod tests {
                 protocol_version: IPC_PROTOCOL_VERSION,
                 request_id: request.request_id,
                 snapshot: Some(crate::tests::mock_snapshot()),
+                authoring_response: None,
                 error: None,
             };
             let response_bytes = serde_json::to_vec(&response).unwrap();
