@@ -219,3 +219,15 @@ M2M-027 integration, quality gates, native acceptance, paired package installati
   relevant checks from project 4, then verify clean status before the user-requested install.
 - Newly reported open blocker: Dragon → Horse rig selection fails to load the Horse model or expose
   its skeleton. Issue record: `KNOWN-ISSUES.md` and `reports/M2M-032/dragon-horse-rig-loading.md`.
+
+## Project 4 storage cleanup (2026-11-24)
+
+- Removed generated Rust/Tauri and MCP `target` trees, Vite `dist`, and the temporary Git bundle;
+  project directory reduced from 8.4 GB to 312 MB.
+- Moved two clean, duplicate nested repository checkouts intact outside project 4 to
+  `project3/worktrees/project4-duplicate-checkouts-20261124/`. Their committed Git history remains
+  in project 4; the frontend's `507192b` commit is preserved under local branch
+  `m2m-030b-integration-frontend` in the frontend submodule.
+- Full histories, runtime assets, reports, and audit artifacts remain in project 4. Rebuild from
+  the final OpenCode-integrated sources before installation. Details:
+  `reports/M2M-032/project4-storage-cleanup.md`.
