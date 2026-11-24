@@ -99,6 +99,23 @@ now detects a session conflict, sends a trusted `session.cancel` (accepted from 
 the frontend), and retries the original operation once. Verified with two sequential real JSON-RPC
 clients: both returned `ok:true` with the live 66-bone catalog.
 
+## Save/restore root cause — RESOLVED (2026-11-24 03:50)
+
+Switching the native app to New Animation produces an equivalent 66-bone skeleton whose ~1e-7 float
+noise tips 6-decimal fingerprint quantization (`1a167d80…` → `e02f5440…`, IDs/hierarchy/names
+identical). Documents saved in that page therefore failed restore on the Explore page.
+
+Proper fix (no restore-time hash rewriting):
+- `AnimationDocument` gained additive optional `rest_transforms`, filled from the live bind pose.
+- `check_rig_compatibility` compares stored vs live bind-pose transforms with 1e-4 tolerance;
+  structural identity (IDs/order/parents/names) remains authoritative. A genuine rest-pose change
+  beyond tolerance still fails; float noise does not.
+- `validate_document` accepts `fingerprint_equivalent` only when compatibility proved equivalence.
+- All 9 rigs are selectable; `Create clip` no longer wipes an open draft when the name field changes.
+
+Verified: fresh MCP clip `Wave Final 4` (66 tracks, revision 7) committed, app restarted, and
+`animations_list` returned it from the real library. All mandatory tools pass (see handoff).
+
 ## Remaining limits
 
 - Bacon watcher does not terminate on its own; Cargo `check` inside it succeeds.
