@@ -231,3 +231,10 @@ M2M-027 integration, quality gates, native acceptance, paired package installati
 - Full histories, runtime assets, reports, and audit artifacts remain in project 4. Rebuild from
   the final OpenCode-integrated sources before installation. Details:
   `reports/M2M-032/project4-storage-cleanup.md`.
+
+
+## Project 4 integration and installation (2026-11-24)
+
+- Integrated OpenCode's readiness and rig-loader fixes. Desktop merge `854be4018aa91894e82aa8fa7f37c14cd64dba90` pins frontend `490db8939d3cb99b956dbce267d235976cabf3c5`. OpenCode's native report verifies New Animation readiness/source tools and all nine rig loads; see `reports/M2M-030/new-animation-source-list-defects.md`.
+- Project 4 paired checks passed; bounded Bacon/BugStalker outcomes, package provenance, MCP smoke, and caveats are in `reports/M2M-032/project4-integration-install.md`. Installed `mesh2motion-git` and `mesh2motion-mcp-git` `0.1.10.r83.m2m032-2`; retained archives in sibling `Mesh2motion-installer-r83-m2m032/`.
+- Source tree cleanup retained at ~313 MB. No UI was opened after install, no canonical promotion or push. Repeated installed Dragon ↔ Horse visual switching remains manual acceptance.

@@ -1,7 +1,7 @@
 # Project 4 migration preparation
 
 Date: 2026-11-24
-Status: PREPARED BASELINE; final integration and install are pending the active OpenCode fix.
+Status: HISTORICAL — superseded by the integrated and installed state in `project4-integration-install.md`.
 
 ## Source and history
 
@@ -56,3 +56,6 @@ was available to archive.
 5. Preserve OpenCode's nested checkouts until it confirms they are no longer active; verify each
    repository and the destination desktop worktree are clean.
 6. Prepare/install the final paired build. Do not push; the user plans to upload to GitHub later.
+
+
+This preparation report is retained as historical context. OpenCode delivered and the integration branch merged the fix; the final paired source and install evidence is in `project4-integration-install.md`.

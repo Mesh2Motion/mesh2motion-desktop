@@ -134,15 +134,17 @@ Status: investigation did NOT merge, promote, package, install, or claim complet
 description fixes do not unblock the three open gates above (renderer pose-parity /
 `RIG_UNAVAILABLE` / `animation_undo_commit` BAD_REQUEST).
 
-## M2M-032 — Dragon-to-Horse rig switching fails (open, user-reported, 2026-11-24)
+## M2M-032 — Dragon-to-Horse rig switching (resolved, 2026-11-24)
 
-When changing the selected rig from Dragon to Horse, the Horse rig does not load and its
-skeleton is not exposed in the authoring UI. This blocks editing/previewing animations for
-the Horse rig and prevents confirming that the selected rig and its bone catalog agree.
-The screenshot supplied with the report was not available as a local file to archive.
+OpenCode fixed the loader path for rigs whose manifests have no model variations. `load_rig()` now
+falls back to the configured `RigConfigEntry.model_file`; Dragon, Spider, Snake, Horse and the
+other shipped rigs load their model and expose their skeleton. The New Animation readiness defect
+was also fixed by counting provider-backed `engine.active_skinned_meshes()` in phase derivation.
 
-Acceptance: switch Dragon → Horse and Horse → Dragon repeatedly; confirm the correct model
-renders, the skeleton/bone catalog becomes available for each rig, animation tracks bind to
-the selected rig fingerprint, and no stale skeleton or previous-rig pose remains visible.
-Status: OPEN. Needs reproduction and frontend/native diagnosis; no fix or verification claimed.
-See `reports/M2M-032/dragon-horse-rig-loading.md`.
+OpenCode reports native verification on a rebuilt app: New Animation reaches `ready`,
+`scene_inspect` and `animations_list` succeed, and all nine advertised rigs load. Regression and
+quality checks are recorded in `reports/M2M-032/new-animation-source-list-defects.md` and the
+Project 4 integration report. The changes are integrated at desktop commit
+`854be4018aa91894e82aa8fa7f37c14cd64dba90`, pinned frontend `490db8939d3cb99b956dbce267d235976cabf3c5`.
+The paired packages are installed as `0.1.10.r83.m2m032-2`. Repeated interactive Dragon ↔ Horse
+switching was not separately exercised after install.

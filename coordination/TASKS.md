@@ -58,9 +58,9 @@
 Integrated, built, and installed the reviewed desktop/frontend pair. Reports: `coordination/reports/M2M-027/`. NATIVE-006 accepted by user on staged native build after five tab switches. Post-install versions, exact binary hashes, and installed JSON-RPC read tools were verified. MCP write tools remain unavailable pending the live frontend authoring bridge.
 - [x] M2M-030B integration — merged Rust MCP, Codex transport, and OpenCode parity/determinism/preview fixes on isolated branches. Desktop final evidence commit `8b763f5a5f3f0eb201aa4e9b50ac603cfcbfaf6d` (code/gitlink commit `94518dc5cdd093f66693f4364af3cffd026cfb9e`) pins frontend `c83c210b63a8fee0680ca563d460a32950665997`; frontend 479 tests, TypeScript, ESLint and Vite pass; locked Rust build, prior tests/fmt/Clippy, Ruff/pytest/ty and ast-grep pass. Native JSON-RPC integration probe received six real 512×512 PNGs and canceled its disposable draft. OpenCode vision-guided wave run verified parity, repeated capture, preview, commit, export/reimport, and undo. Remaining: human aesthetic sign-off, legacy staged six-track clip cleanup, native fault injection; Vite large-chunk advisory and bounded Bacon/BugStalker limitations documented; deprecated __dirname warning fixed. No canonical promotion or install. Reports: `reports/M2M-030/`; audit: `audits/M2M-030/mcp-vision-integration-native.ndjson`.
 
-- [ ] M2M-032 — Reproduce and fix user-reported Dragon → Horse rig loading failure (Horse model
-  does not load and its skeleton is not exposed); verify repeated rig switches and selected rig /
-  skeleton / fingerprint consistency in the native app. See `reports/M2M-032/dragon-horse-rig-loading.md`.
-- [ ] Project 4 migration — wait for OpenCode's in-flight frontend fix, integrate its committed
-  change, rebuild the exact paired sources, verify clean Git state, and only then install. Do not
-  push; GitHub upload is for the user's later action.
+- [x] M2M-032 — OpenCode fixed provider-backed New Animation readiness and fallback loading for
+  rig model files. Integrated desktop commit `854be40` pins frontend `490db89`; OpenCode reports
+  native checks for ready phase, source tools, and all nine rigs. Details in `reports/M2M-032/`.
+- [x] Project 4 integration/build/install — paired packages `0.1.10.r83.m2m032-2` installed;
+  source, verification, package provenance, and limitations recorded in
+  `reports/M2M-032/project4-integration-install.md`. No push or canonical branch promotion.

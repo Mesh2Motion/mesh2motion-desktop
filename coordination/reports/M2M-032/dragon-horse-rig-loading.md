@@ -1,35 +1,37 @@
-# Open issue: Dragon-to-Horse rig switch does not load the rig
+# Dragon-to-Horse rig loading — resolved in integration
 
 Date reported: 2026-11-24
-Status: OPEN — not yet reproduced or fixed.
+Status: FIXED in source and integrated; native interactive switching not independently repeated by Codex.
 
-## User report
+## Root cause and fix
 
-After switching the rig selection from Dragon to Horse, the Horse rig does not load and its
-skeleton is not exposed. The user supplied a screenshot in chat; no local screenshot path was
-available to archive in this report.
+Dragon, Spider, Snake, and Horse ship a `model.glb` but have zero manifest variations. `load_rig()`
+only searched variations and therefore reported no rigged model. OpenCode added a fallback to
+`RigConfigEntry.model_file`, which loads the shipped model and exposes its skeleton. OpenCode's
+rebuilt native verification reports all nine advertised rigs load.
 
-## Impact
+A related New Animation page readiness defect was fixed at the same time. Models loaded directly
+into the engine left `load_model_step.vertex_count` at zero, so `derive_phase()` kept the app in
+`loading`. `EngineControlHost.observe()` now also counts provider-backed
+`engine.active_skinned_meshes()`. Additive `phaseInputs` diagnostics make the decision inspectable.
+OpenCode verified phase `ready` and successful `scene_inspect` and `animations_list` calls on the
+New Animation page.
 
-Horse animation authoring and preview are blocked. The UI may also leave stale Dragon model,
-skeleton, catalog, or rig-bound animation state visible after a rig switch.
+## Integration and regression evidence
 
-## Reproduction to verify
+- Desktop integration merge: `854be4018aa91894e82aa8fa7f37c14cd64dba90`.
+- Frontend pin: `490db8939d3cb99b956dbce267d235976cabf3c5`.
+- OpenCode implementation and verification report:
+  `coordination/reports/M2M-030/new-animation-source-list-defects.md`.
+- Project 4 full integration, test, package, and install record:
+  `coordination/reports/M2M-032/project4-integration-install.md`.
+- OpenCode reports Ruff, pytest (6), ty, ast-grep, Bacon, BugStalker 0.4.9, TypeScript, 484 frontend
+'tests, ESLint, Vite, Rust format, MCP and Tauri tests, and denied-warning Clippy passing. Codex's
+  independent paired-tree checks and any bounded-tool limitations are detailed in the integration report.
 
-1. Open the rig selector with Dragon loaded.
-2. Select Horse and wait for loading to settle.
-3. Check model render, skeleton/bone catalog, selected rig identity/fingerprint, and animation
-   track binding.
-4. Switch back to Dragon, then to Horse again to detect stale state or a race.
+## Remaining verification
 
-## Acceptance
-
-- Horse model and its actual skeleton/bone catalog load and become usable.
-- The selected rig identity and fingerprint match the rendered model and authoring catalog.
-- No Dragon skeleton, pose, or animation binding remains after the switch.
-- Repeated Dragon ↔ Horse switching works without reload, stale content, or hidden errors.
-- Add regression coverage for the failing loading/state transition and verify in the staged native
-  app.
-
-No implementation or passing verification is claimed here. Route frontend/model-loader findings
-through the active integration handoff before changing OpenCode-owned frontend files.
+The source defect is fixed and the resulting packages are installed. Codex did not launch the
+application window after installation, to avoid stealing the user's focus or pointer. OpenCode's
+native verification covers all nine rig loads, but repeated Dragon ↔ Horse interaction in the
+installed build remains a manual acceptance check.
