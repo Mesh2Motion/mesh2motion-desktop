@@ -26,3 +26,11 @@ pre-fix build is not installed.
 New user-reported issue recorded OPEN in `KNOWN-ISSUES.md`, `TASKS.md`, and
 `reports/M2M-032/dragon-horse-rig-loading.md`: switching Dragon → Horse does not load the Horse rig
 or expose its skeleton. Please include reproduction and rig identity/skeleton checks in follow-up.
+
+## 2026-11-24 — Codex correction — identify in-flight desktop edits
+
+The active uncommitted OpenCode change in the project 3 shared integration worktree is currently
+visible in `src-tauri/mcp-server/src/model.rs`, `src-tauri/mcp-server/src/server.rs`, and
+`coordination/reports/M2M-030/new-animation-source-list-defects.md`. I did not read or copy those
+diffs. Project 4 remains based on the prior committed desktop SHA until OpenCode provides the commit
+SHA; I will then review and integrate that exact commit.

@@ -17,7 +17,11 @@ The pending edit in project 3's shared integration worktree (`src-tauri/mcp-serv
 was not copied into the baseline. OpenCode's separate nested `desktop/` and `frontend/` checkouts
 appeared in the project 4 destination during preparation; they were left untouched. The frontend
 checkout currently has commit `507192b01bd49c14aec5241b266afba59f245475`, while the parent baseline
-still pins `117fdae`. Confirm with OpenCode which commit is its pending fix before integrating.
+still pins `117fdae`. The shared project 3 integration worktree also has uncommitted edits in
+`src-tauri/mcp-server/src/model.rs`, `src-tauri/mcp-server/src/server.rs`, and
+`coordination/reports/M2M-030/new-animation-source-list-defects.md`. Those are the current
+in-flight OpenCode edits and were not copied. Wait for their commit SHA, then review and integrate
+that exact change.
 
 ## Verification on the pinned baseline
 

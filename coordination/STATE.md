@@ -212,7 +212,9 @@ M2M-027 integration, quality gates, native acceptance, paired package installati
   advisory. No dependencies were installed and no package was installed.
 - OpenCode's nested `desktop/` and `frontend/` checkouts remain untouched and each is individually
   clean. They are separate repositories, excluded locally via `.git/info/exclude` so the desktop
-  baseline can remain clean without staging or altering those checkouts.
+  baseline can remain clean without staging or altering those checkouts. The shared project 3
+  integration worktree separately has in-flight OpenCode changes in `model.rs`, `server.rs`, and
+  `coordination/reports/M2M-030/new-animation-source-list-defects.md`; none were copied.
 - Do not install this pre-fix build. Next: integrate the OpenCode commit, rerun the final build and
   relevant checks from project 4, then verify clean status before the user-requested install.
 - Newly reported open blocker: Dragon → Horse rig selection fails to load the Horse model or expose
