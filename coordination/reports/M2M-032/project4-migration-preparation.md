@@ -49,6 +49,6 @@ was available to archive.
 2. Integrate that change into project 4; resolve frontend ancestry and parent gitlink intentionally.
 3. Rebuild frontend, Tauri app with `mcp-host`, and MCP sidecar; rerun the focused tests.
 4. Reproduce and fix Dragon → Horse loading/skeleton exposure, then run the relevant native check.
-5. Move or remove OpenCode's temporary nested checkouts only after OpenCode confirms they are no
-   longer active; verify the destination Git worktree is clean.
+5. Preserve OpenCode's nested checkouts until it confirms they are no longer active; verify each
+   repository and the destination desktop worktree are clean.
 6. Prepare/install the final paired build. Do not push; the user plans to upload to GitHub later.

@@ -210,9 +210,9 @@ M2M-027 integration, quality gates, native acceptance, paired package installati
 - Frontend production build, locked desktop workspace tests (2), locked MCP tests (41 library +
   3 binary), and locked native desktop build passed. Vite emitted its existing >500 kB chunk
   advisory. No dependencies were installed and no package was installed.
-- OpenCode has active nested `desktop/` and `frontend/` checkouts in the destination; they remain
-  untouched. Their untracked presence means the destination's final clean Git status is pending
-  coordination after OpenCode commits its fix.
+- OpenCode's nested `desktop/` and `frontend/` checkouts remain untouched and each is individually
+  clean. They are separate repositories, excluded locally via `.git/info/exclude` so the desktop
+  baseline can remain clean without staging or altering those checkouts.
 - Do not install this pre-fix build. Next: integrate the OpenCode commit, rerun the final build and
   relevant checks from project 4, then verify clean status before the user-requested install.
 - Newly reported open blocker: Dragon → Horse rig selection fails to load the Horse model or expose
