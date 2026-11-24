@@ -49,6 +49,21 @@ Fixed in `src/newAnimation/keyframeEditor.ts`:
   exactly 0.5 s (3 keys remain) and removal leaves keys `[0, 1]`. Frontend gates: 71 files / 480
   tests, tsc, eslint, Vite all pass.
 
+## GUI edits rejected while an MCP session is active (second editor bug)
+
+The user still could not edit `upperarm_l` in the New Animation tab; no GUI edit requests appeared in
+the app log at all. Root cause: after an MCP draft is created, the bridge's single authoring session
+is `mcp-…`, while `SharedDraftController` sent GUI edits under its own `gui-…` session ID. The
+dispatcher rejected every GUI operation as a competing session before any IPC was emitted.
+
+Fixed:
+- `AuthoringDispatcher.peek_sequence()` and `FrontendAuthoringBridge.active_session_id()` /
+  `peek_authoring_sequence()` expose the active session and its next legal sequence.
+- `SharedDraftController.operation()` now edits under the **active** session (MCP or GUI) and uses
+  that session's next sequence, so GUI and MCP mutate the same authoritative draft.
+- Regression test: with a fake MCP session owning the bridge at sequence 4, a GUI create succeeds and
+  advances that session's sequence. Frontend gates: 71 files / 481 tests, tsc, eslint, Vite pass.
+
 ## Remaining limits
 
 - Bacon watcher does not terminate on its own; Cargo `check` inside it succeeds.
