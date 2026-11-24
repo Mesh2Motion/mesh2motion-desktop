@@ -1153,6 +1153,8 @@ pub struct ApplicationStatusData {
     pub uptime_ms: u64,
     pub diagnostics_enabled: bool,
     pub snapshot: SnapshotInfo,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phase_inputs: Option<crate::model::PhaseInputs>,
 }
 
 #[derive(Clone, Debug, serde::Serialize, JsonSchema)]
@@ -1194,6 +1196,7 @@ impl Mesh2MotionMcp {
                         captured_at: snapshot.meta.captured_at.clone(),
                         age_ms: snapshot.meta.age_ms,
                     },
+                    phase_inputs: snapshot.application.phase_inputs.clone(),
                 };
                 Json(ToolEnvelope::success(data, &snapshot.meta))
             }

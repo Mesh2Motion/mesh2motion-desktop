@@ -50,6 +50,23 @@ pub struct ApplicationInfo {
     pub diagnostics_enabled: bool,
     #[serde(alias = "last_error", default, skip_serializing_if = "Option::is_none")]
     pub last_error: Option<String>,
+    #[serde(
+        alias = "phase_inputs",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub phase_inputs: Option<PhaseInputs>,
+}
+
+#[derive(Clone, Debug, Deserialize, JsonSchema, Serialize)]
+pub struct PhaseInputs {
+    pub first_frame_rendered: bool,
+    pub has_loaded_model: bool,
+    pub engine_attached: bool,
+    #[serde(default)]
+    pub active_meshes: usize,
+    #[serde(default)]
+    pub vertex_count: usize,
 }
 
 #[derive(Clone, Debug, Deserialize, JsonSchema, Serialize)]

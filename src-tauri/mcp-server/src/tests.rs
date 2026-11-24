@@ -36,6 +36,7 @@ pub(crate) fn mock_snapshot() -> ControlSnapshot {
             uptime_ms: 5_000,
             diagnostics_enabled: false,
             last_error: None,
+            phase_inputs: None,
         },
         renderer: RendererInfo {
             created: true,
