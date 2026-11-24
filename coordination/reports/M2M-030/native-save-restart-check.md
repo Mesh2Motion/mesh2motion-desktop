@@ -4,10 +4,10 @@
 
 The integrated native app and sidecar successfully committed a new AnimationDocument to the real Human animation library, and the saved clip survived a full application restart.
 
-- Integration desktop branch at test: `d042136fa99b86506eda9d517e56b8a29b67deae`
+- Integration desktop branch at test: `c2a84ac28a6982a2ff8fc551f06647fc3a8542de`
 - Integrated frontend pin: `d106ffe266404e18e7874be029e6af0b68e2bb53`
 - Tauri app binary SHA-256: `9a74a35c8c877ff1061c4bba8cbf381ea21bc0c8121159a595eed277240fb344`
-- MCP sidecar SHA-256: `69fcc7a6f2dfe70b0286916d891ab1e70dbd10dc3c7092a50ef19e522f4c4e1e`
+- MCP sidecar SHA-256: `3495c73a4b035855a201f13506d2310606992b7bf46375b1c235dc55a52cb1bb`
 
 The actual Tauri app was built with `--features mcp-host`, launched, and reached ready state. Through a real stdio JSON-RPC client connected to its private Unix socket, the check opened the New Animation page, read the live Human rig catalog, created `Codex Save Restart Smoke`, authored two rest-position keyframes against live bone `human:bone:010`, validated it, and committed it. The commit returned library entry `custom-import-1`, revision 3. In Explore, the app reported exactly one matching custom-library entry (one second, 67 tracks, authored id `authored-mwu4ouac-74dkci`).
 
@@ -24,5 +24,7 @@ The `Codex Save Restart Smoke` test entry remains in the user's authored library
 - `artifacts/M2M-030/save-restart-check.ndjson`: app page switch, live catalog, draft creation, keyframe edit, validation, native commit, and initial library-read attempt while New Animation was active (`NOT_READY`, as expected for that page).
 - `artifacts/M2M-030/save-restart-check-list-2.ndjson`: Explore readiness and pre-restart library listing with the single smoke entry.
 - `artifacts/M2M-030/save-restart-check-after-restart.ndjson`: post-restart ready status and matching persisted entry.
+
+After rebuilding the sidecar with the integrated OpenCode tool-guidance edits, the app was relaunched once more from the final build. It reached `phase=ready`, returned exactly one matching saved clip, and the app was left on New Animation. Final verification transcript: `artifacts/M2M-030/save-restart-check-after-final-build.ndjson`.
 
 No packages were installed. No installer or release package was built or installed.
