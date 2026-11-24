@@ -163,6 +163,29 @@ impl Mesh2MotionMcp {
         operation: AuthoringOperation,
         payload: serde_json::Value,
     ) -> Json<ToolEnvelope<serde_json::Value>> {
+        let response = self.authoring_call_once(operation, payload.clone()).await;
+        // A reconnecting MCP client can meet a stale frontend session left by a
+        // previous peer. The frontend accepts session.cancel from any trusted
+        // native request, so clear it once and retry instead of stalling.
+        if response
+            .0
+            .error
+            .as_ref()
+            .is_some_and(|error| error.code == "SESSION_CONFLICT")
+        {
+            let _ = self
+                .authoring_call_once(AuthoringOperation::SessionCancel, serde_json::json!({}))
+                .await;
+            return self.authoring_call_once(operation, payload).await;
+        }
+        response
+    }
+
+    async fn authoring_call_once(
+        &self,
+        operation: AuthoringOperation,
+        payload: serde_json::Value,
+    ) -> Json<ToolEnvelope<serde_json::Value>> {
         let sequence = self
             .next_authoring_sequence
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed)

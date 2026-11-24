@@ -64,6 +64,41 @@ Fixed:
 - Regression test: with a fake MCP session owning the bridge at sequence 4, a GUI create succeeds and
   advances that session's sequence. Frontend gates: 71 files / 481 tests, tsc, eslint, Vite pass.
 
+## MCP camera-orientation analysis (user question, 2026-11-24)
+
+Measured from a real six-view observation (`/tmp/opencode/camera-orientation/report.json`):
+
+| View | Camera position | Looks | Up |
+| --- | --- | --- | --- |
+| front | (x, 1.16, −5.29) | +Z | +Y |
+| back | (x, 1.08, +5.38) | −Z | +Y |
+| left | (+4.96, 1.12, z) | −X | +Y |
+| right | (−5.72, 1.12, z) | +X | +Y |
+| top | (x, +6.45, z) | −Y | +Z |
+| bottom | (x, −4.22, z) | +Y | −Z |
+
+The rig's own facing comes from foot→ball geometry: `foot_l` world z = −0.048, `ball_l` world z =
++0.113, so the Human model faces **+Z**. Left arm is +X, right arm is −X. Therefore:
+- `left`/`right`/`top`/`bottom` are consistent with the rig's own axes.
+- **`front` and `back` are inverted relative to the rig's facing**: `front` (world −Z) sees the
+  model's **back**, and `back` (world +Z) sees the model's **front**. The app's viewport camera is at
+  +Z, so it matches MCP `back`, not `front`.
+
+This is the exact cause of my repeated orientation failures: I judged the palm in `front` images,
+which show the back of the model, so every "palm toward camera" correction turned the palm away from
+the real viewer. A controlled probe in the `back` view showed `hand_l.y ≈ −60°` gives an open palm
+facing the model's front/viewer, while `+60°` points it away. Current tool descriptions warn about
+this, but the durable fix is a documented contract amendment adding rig-forward-relative view aliases
+(or swapping the world direction of `front`/`back`); until then, use `back` for face/palm checks.
+
+## Reconnect stall fix
+
+A reconnecting MCP client previously stalled the app because the frontend bridge kept the prior
+session and the new sidecar received `SESSION_CONFLICT` for every request. `Mesh2MotionMcp::authoring_call`
+now detects a session conflict, sends a trusted `session.cancel` (accepted from any native request by
+the frontend), and retries the original operation once. Verified with two sequential real JSON-RPC
+clients: both returned `ok:true` with the live 66-bone catalog.
+
 ## Remaining limits
 
 - Bacon watcher does not terminate on its own; Cargo `check` inside it succeeds.
