@@ -1488,7 +1488,7 @@ impl Mesh2MotionMcp {
 
     #[tool(
         name = "animation_set_bone_keyframes",
-        description = "Atomically replace one live-rig bone channel at an expected draft revision."
+        description = "Atomically replace one live-rig bone channel at an expected draft revision. HUMAN RIG POSE CONVENTIONS (validated on the live 66-bone rig): values are local quaternions composed as rest * delta, NOT absolute identity rotations. Arm raising/lowering uses the upperarm Z axis: upperarm_l.z positive raises the left arm, upperarm_r.z positive lowers the right arm. Elbow flexion uses lowerarm Z with a NEGATIVE sign for an anatomically correct forward bend: lowerarm_l.z about -60 with upperarm_l.z about 95 puts the forearm vertical and the hand beside the head; a POSITIVE lowerarm.z folds the forearm behind the head and contorts the hand. Wrist/palm orientation uses hand_l Y in a small range such as -30..+30; large elbow swings must NOT be used to wave. Validated greeting wave (2 s): upperarm_l.z=95, lowerarm_l.z=-60 constant, upperarm_r.z=82, lowerarm_r.z=8, hand_l.y alternating -30/+30 every 0.25 s. Always request animation_observe_pose front/right images AND joint projections, inspect the actual pixels, and confirm the elbow bends forward and the palm faces the intended camera before committing."
     )]
     pub async fn animation_set_bone_keyframes(
         &self,
@@ -1845,7 +1845,7 @@ impl Mesh2MotionMcp {
 
     #[tool(
         name = "animation_observe_pose",
-        description = "Capture one synchronized pose from 1..6 hidden model cameras and return live joint projection metadata. Requires the draft_id returned by animation_create_draft."
+        description = "Capture one synchronized pose from 1..6 hidden model cameras and return live joint projection metadata. Requires the draft_id returned by animation_create_draft. Cameras are WORLD-aligned, not rig-forward aligned: 'front' looks from world -Z toward +Z, 'back' from +Z toward -Z, 'left' from +X, 'right' from -X, 'top' from +Y, 'bottom' from -Y. On the Human rig the model faces +Z, so the 'front' view can show the model's back; use 'back' or 'right' to judge a palm that must face the default viewport camera at +Z. Images are real PNG/JPEG MCP image blocks; image_ref chunk bytes are byte-identical to the inline capture. Compare projected joints with the pixels before accepting a pose; do not infer bone motion from a single view."
     )]
     pub async fn animation_observe_pose(
         &self,
