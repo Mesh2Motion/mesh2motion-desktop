@@ -19,8 +19,12 @@ gap. The M2M-030B integration candidate exposes all three tools.
   `/usr/bin/mesh2motion-mcp` returned 17 tools. It included
   `animation_set_bone_keyframes`; it did not include `animation_observe_pose` or
   `animation_capture_view`.
-- Source inspection of `worktrees/m2m031-release/desktop/src-tauri/mcp-server/src/server.rs`
+- Inspection of the committed release source with
+  `git show e439eb1a638c136df594888bd25071776083c24d:src-tauri/mcp-server/src/server.rs`
   confirms the same registrations: keyframe authoring exists, observation registrations do not.
+- The release worktree currently has an uncommitted experimental backport, including the
+  observation tool registrations. Those working-tree edits are not part of release commit
+  `e439eb1` and were not used as release evidence; they remain preserved and untouched.
 - A JSON-RPC `tools/list` exchange against the M2M-030B integration sidecar returned 20 tools
   and included all three names.
 
