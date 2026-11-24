@@ -43,4 +43,7 @@ The front render looks anatomically improved, but the current fresh run did not 
 
 - Production Vite build passed with the known large-chunk advisory. The earlier code-splitting attempt was reverted because it stopped native frontend readiness.
 - The system pytest environment emitted a Dash plugin deprecation warning; this is external to the maintained MCP client.
+- Rust MCP observation feature source commit: `622ebe804ca3b25cc20e764a54ffa3a542e1ecf8`.
+- Rebuilt debug desktop SHA-256: `b8b61d1df3e1043165487e860d4cd7180b2faf7e2c68f1ea8d3ad8711a2de0c5`; MCP sidecar SHA-256: `87218aa85eea1ea6a08780f70d55712f8fa968b9cc22edfac380c9d0eb149b7e`.
+- The isolated desktop integration branch and frontend integration branch are clean after commit. The OpenCode dependency symlink remains local-only and is excluded through that worktree’s `.git/info/exclude`; it was neither staged nor removed.
 - No packages were installed. No release package was installed. Canonical branches were not modified.
