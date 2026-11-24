@@ -16,11 +16,13 @@ PNG_FIXTURE = base64.b64encode(
 class FakeClient(McpStdioClient):
     def __init__(self, result: dict[str, Any]) -> None:
         self.result = result
+        self.calls: list[tuple[str, dict[str, Any]]] = []
 
     def call_tool(
         self, name: str, arguments: dict[str, Any], timeout: float = 35
     ) -> dict[str, Any]:
-        del name, arguments, timeout
+        del timeout
+        self.calls.append((name, arguments))
         return self.result
 
 
@@ -76,6 +78,24 @@ def test_observe_pose_requires_unique_supported_views_before_rpc() -> None:
             timestamp_seconds=0.5,
             views=["desktop"],
         )
+
+
+def test_import_draft_sends_full_document_in_one_atomic_tool_call() -> None:
+    document = {
+        "schema": "animation-document/v1",
+        "revision": 0,
+        "channels": [{"bone_id": "human:bone:arm", "property": "rotation", "keyframes": []}],
+    }
+    client = client_with_result({"structuredContent": {"revision": 1, "draft_id": "draft-1"}})
+    result = client.import_draft(document)
+    assert result["revision"] == 1
+    assert client.calls == [("animation_import_draft", {"document": document})]
+
+
+def test_import_draft_rejects_missing_revision_metadata() -> None:
+    client = client_with_result({"content": []})
+    with pytest.raises(TypeError, match="structured revision metadata"):
+        client.import_draft({"schema": "animation-document/v1"})
 
 
 def test_close_waits_for_graceful_mcp_shutdown_before_terminating() -> None:

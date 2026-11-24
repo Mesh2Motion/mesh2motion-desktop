@@ -132,6 +132,22 @@ class McpStdioClient:
             raise TypeError("pose observation did not return structured capture metadata")
         return structured
 
+    def import_draft(self, document: dict[str, Any]) -> dict[str, Any]:
+        """Create an initial validated animation draft in one MCP call.
+
+        Build channels from the live ``skeleton_get_catalog`` result and compose
+        each authored delta with that bone's local rest transform before calling
+        this method. The Rust authoring bridge validates the document against
+        the active rig and applies it atomically. This import is for a session
+        with no active draft; revise an existing draft through its revisioned
+        keyframe tools.
+        """
+        result = self.call_tool("animation_import_draft", {"document": document})
+        structured = result.get("structuredContent")
+        if not isinstance(structured, dict):
+            raise TypeError("draft import did not return structured revision metadata")
+        return structured
+
     def capture_view(self, capture_id: str, view: str) -> tuple[dict[str, Any], str, bytes]:
         if view not in VIEWS:
             raise ValueError("unsupported observation camera")
