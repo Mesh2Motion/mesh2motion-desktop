@@ -1,0 +1,3212 @@
+{
+  "schema_version": "animation-document/v1",
+  "rig": {
+    "identifier": "human",
+    "fingerprint": "e02f544092433209e1360d242ed35e969bb50688d12cdc7136c5a51b61e4280a"
+  },
+  "bones": [
+    {
+      "id": "human:bone:000",
+      "display_name": "root",
+      "index": 0,
+      "parent_id": null
+    },
+    {
+      "id": "human:bone:001",
+      "display_name": "pelvis",
+      "index": 1,
+      "parent_id": "human:bone:000"
+    },
+    {
+      "id": "human:bone:002",
+      "display_name": "spine_01",
+      "index": 2,
+      "parent_id": "human:bone:001"
+    },
+    {
+      "id": "human:bone:003",
+      "display_name": "spine_02",
+      "index": 3,
+      "parent_id": "human:bone:002"
+    },
+    {
+      "id": "human:bone:004",
+      "display_name": "spine_03",
+      "index": 4,
+      "parent_id": "human:bone:003"
+    },
+    {
+      "id": "human:bone:005",
+      "display_name": "clavicle_l",
+      "index": 5,
+      "parent_id": "human:bone:004"
+    },
+    {
+      "id": "human:bone:006",
+      "display_name": "upperarm_l",
+      "index": 6,
+      "parent_id": "human:bone:005"
+    },
+    {
+      "id": "human:bone:007",
+      "display_name": "lowerarm_l",
+      "index": 7,
+      "parent_id": "human:bone:006"
+    },
+    {
+      "id": "human:bone:008",
+      "display_name": "hand_l",
+      "index": 8,
+      "parent_id": "human:bone:007"
+    },
+    {
+      "id": "human:bone:009",
+      "display_name": "index_01_l",
+      "index": 9,
+      "parent_id": "human:bone:008"
+    },
+    {
+      "id": "human:bone:010",
+      "display_name": "index_02_l",
+      "index": 10,
+      "parent_id": "human:bone:009"
+    },
+    {
+      "id": "human:bone:011",
+      "display_name": "index_03_l",
+      "index": 11,
+      "parent_id": "human:bone:010"
+    },
+    {
+      "id": "human:bone:012",
+      "display_name": "index_04_leaf_l",
+      "index": 12,
+      "parent_id": "human:bone:011"
+    },
+    {
+      "id": "human:bone:013",
+      "display_name": "middle_01_l",
+      "index": 13,
+      "parent_id": "human:bone:008"
+    },
+    {
+      "id": "human:bone:014",
+      "display_name": "middle_02_l",
+      "index": 14,
+      "parent_id": "human:bone:013"
+    },
+    {
+      "id": "human:bone:015",
+      "display_name": "middle_03_l",
+      "index": 15,
+      "parent_id": "human:bone:014"
+    },
+    {
+      "id": "human:bone:016",
+      "display_name": "middle_04_leaf_l",
+      "index": 16,
+      "parent_id": "human:bone:015"
+    },
+    {
+      "id": "human:bone:017",
+      "display_name": "pinky_01_l",
+      "index": 17,
+      "parent_id": "human:bone:008"
+    },
+    {
+      "id": "human:bone:018",
+      "display_name": "pinky_02_l",
+      "index": 18,
+      "parent_id": "human:bone:017"
+    },
+    {
+      "id": "human:bone:019",
+      "display_name": "pinky_03_l",
+      "index": 19,
+      "parent_id": "human:bone:018"
+    },
+    {
+      "id": "human:bone:020",
+      "display_name": "pinky_04_leaf_l",
+      "index": 20,
+      "parent_id": "human:bone:019"
+    },
+    {
+      "id": "human:bone:021",
+      "display_name": "ring_01_l",
+      "index": 21,
+      "parent_id": "human:bone:008"
+    },
+    {
+      "id": "human:bone:022",
+      "display_name": "ring_02_l",
+      "index": 22,
+      "parent_id": "human:bone:021"
+    },
+    {
+      "id": "human:bone:023",
+      "display_name": "ring_03_l",
+      "index": 23,
+      "parent_id": "human:bone:022"
+    },
+    {
+      "id": "human:bone:024",
+      "display_name": "ring_04_leaf_l",
+      "index": 24,
+      "parent_id": "human:bone:023"
+    },
+    {
+      "id": "human:bone:025",
+      "display_name": "thumb_01_l",
+      "index": 25,
+      "parent_id": "human:bone:008"
+    },
+    {
+      "id": "human:bone:026",
+      "display_name": "thumb_02_l",
+      "index": 26,
+      "parent_id": "human:bone:025"
+    },
+    {
+      "id": "human:bone:027",
+      "display_name": "thumb_03_l",
+      "index": 27,
+      "parent_id": "human:bone:026"
+    },
+    {
+      "id": "human:bone:028",
+      "display_name": "thumb_04_leaf_l",
+      "index": 28,
+      "parent_id": "human:bone:027"
+    },
+    {
+      "id": "human:bone:029",
+      "display_name": "clavicle_r",
+      "index": 29,
+      "parent_id": "human:bone:004"
+    },
+    {
+      "id": "human:bone:030",
+      "display_name": "upperarm_r",
+      "index": 30,
+      "parent_id": "human:bone:029"
+    },
+    {
+      "id": "human:bone:031",
+      "display_name": "lowerarm_r",
+      "index": 31,
+      "parent_id": "human:bone:030"
+    },
+    {
+      "id": "human:bone:032",
+      "display_name": "hand_r",
+      "index": 32,
+      "parent_id": "human:bone:031"
+    },
+    {
+      "id": "human:bone:033",
+      "display_name": "index_01_r",
+      "index": 33,
+      "parent_id": "human:bone:032"
+    },
+    {
+      "id": "human:bone:034",
+      "display_name": "index_02_r",
+      "index": 34,
+      "parent_id": "human:bone:033"
+    },
+    {
+      "id": "human:bone:035",
+      "display_name": "index_03_r",
+      "index": 35,
+      "parent_id": "human:bone:034"
+    },
+    {
+      "id": "human:bone:036",
+      "display_name": "index_04_leaf_r",
+      "index": 36,
+      "parent_id": "human:bone:035"
+    },
+    {
+      "id": "human:bone:037",
+      "display_name": "middle_01_r",
+      "index": 37,
+      "parent_id": "human:bone:032"
+    },
+    {
+      "id": "human:bone:038",
+      "display_name": "middle_02_r",
+      "index": 38,
+      "parent_id": "human:bone:037"
+    },
+    {
+      "id": "human:bone:039",
+      "display_name": "middle_03_r",
+      "index": 39,
+      "parent_id": "human:bone:038"
+    },
+    {
+      "id": "human:bone:040",
+      "display_name": "middle_04_leaf_r",
+      "index": 40,
+      "parent_id": "human:bone:039"
+    },
+    {
+      "id": "human:bone:041",
+      "display_name": "pinky_01_r",
+      "index": 41,
+      "parent_id": "human:bone:032"
+    },
+    {
+      "id": "human:bone:042",
+      "display_name": "pinky_02_r",
+      "index": 42,
+      "parent_id": "human:bone:041"
+    },
+    {
+      "id": "human:bone:043",
+      "display_name": "pinky_03_r",
+      "index": 43,
+      "parent_id": "human:bone:042"
+    },
+    {
+      "id": "human:bone:044",
+      "display_name": "pinky_04_leaf_r",
+      "index": 44,
+      "parent_id": "human:bone:043"
+    },
+    {
+      "id": "human:bone:045",
+      "display_name": "ring_01_r",
+      "index": 45,
+      "parent_id": "human:bone:032"
+    },
+    {
+      "id": "human:bone:046",
+      "display_name": "ring_02_r",
+      "index": 46,
+      "parent_id": "human:bone:045"
+    },
+    {
+      "id": "human:bone:047",
+      "display_name": "ring_03_r",
+      "index": 47,
+      "parent_id": "human:bone:046"
+    },
+    {
+      "id": "human:bone:048",
+      "display_name": "ring_04_leaf_r",
+      "index": 48,
+      "parent_id": "human:bone:047"
+    },
+    {
+      "id": "human:bone:049",
+      "display_name": "thumb_01_r",
+      "index": 49,
+      "parent_id": "human:bone:032"
+    },
+    {
+      "id": "human:bone:050",
+      "display_name": "thumb_02_r",
+      "index": 50,
+      "parent_id": "human:bone:049"
+    },
+    {
+      "id": "human:bone:051",
+      "display_name": "thumb_03_r",
+      "index": 51,
+      "parent_id": "human:bone:050"
+    },
+    {
+      "id": "human:bone:052",
+      "display_name": "thumb_04_leaf_r",
+      "index": 52,
+      "parent_id": "human:bone:051"
+    },
+    {
+      "id": "human:bone:053",
+      "display_name": "neck_01",
+      "index": 53,
+      "parent_id": "human:bone:004"
+    },
+    {
+      "id": "human:bone:054",
+      "display_name": "head",
+      "index": 54,
+      "parent_id": "human:bone:053"
+    },
+    {
+      "id": "human:bone:055",
+      "display_name": "head_leaf",
+      "index": 55,
+      "parent_id": "human:bone:054"
+    },
+    {
+      "id": "human:bone:056",
+      "display_name": "thigh_l",
+      "index": 56,
+      "parent_id": "human:bone:001"
+    },
+    {
+      "id": "human:bone:057",
+      "display_name": "calf_l",
+      "index": 57,
+      "parent_id": "human:bone:056"
+    },
+    {
+      "id": "human:bone:058",
+      "display_name": "foot_l",
+      "index": 58,
+      "parent_id": "human:bone:057"
+    },
+    {
+      "id": "human:bone:059",
+      "display_name": "ball_l",
+      "index": 59,
+      "parent_id": "human:bone:058"
+    },
+    {
+      "id": "human:bone:060",
+      "display_name": "ball_leaf_l",
+      "index": 60,
+      "parent_id": "human:bone:059"
+    },
+    {
+      "id": "human:bone:061",
+      "display_name": "thigh_r",
+      "index": 61,
+      "parent_id": "human:bone:001"
+    },
+    {
+      "id": "human:bone:062",
+      "display_name": "calf_r",
+      "index": 62,
+      "parent_id": "human:bone:061"
+    },
+    {
+      "id": "human:bone:063",
+      "display_name": "foot_r",
+      "index": 63,
+      "parent_id": "human:bone:062"
+    },
+    {
+      "id": "human:bone:064",
+      "display_name": "ball_r",
+      "index": 64,
+      "parent_id": "human:bone:063"
+    },
+    {
+      "id": "human:bone:065",
+      "display_name": "ball_leaf_r",
+      "index": 65,
+      "parent_id": "human:bone:064"
+    }
+  ],
+  "clip": {
+    "name": "Left Foot Sole Clap - Final",
+    "duration_seconds": 2.4
+  },
+  "channels": [
+    {
+      "bone_id": "human:bone:002",
+      "property": "quaternion",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            -0.06470268182174381,
+            1.0393821984912737e-07,
+            -1.2603868484907805e-08,
+            0.9979045861028316
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.24,
+          "values": [
+            -0.04673088766798883,
+            1.0404268132705965e-07,
+            -9.103021752168904e-09,
+            0.9989075153074738
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.54,
+          "values": [
+            -0.02724454112992991,
+            1.0411780755282437e-07,
+            -5.307145168468917e-09,
+            0.9996287985940624
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.76,
+          "values": [
+            -0.001747911811168986,
+            1.0415631134673656e-07,
+            -3.4048515454350963e-10,
+            0.999998472400978
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.87,
+          "values": [
+            -0.001747911811168986,
+            1.0415631134673656e-07,
+            -3.4048515454350963e-10,
+            0.999998472400978
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.97,
+          "values": [
+            -0.001747911811168986,
+            1.0415631134673656e-07,
+            -3.4048515454350963e-10,
+            0.999998472400978
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.08,
+          "values": [
+            -0.001747911811168986,
+            1.0415631134673656e-07,
+            -3.4048515454350963e-10,
+            0.999998472400978
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.18,
+          "values": [
+            -0.001747911811168986,
+            1.0415631134673656e-07,
+            -3.4048515454350963e-10,
+            0.999998472400978
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.3,
+          "values": [
+            -0.001747911811168986,
+            1.0415631134673656e-07,
+            -3.4048515454350963e-10,
+            0.999998472400978
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.42,
+          "values": [
+            -0.001747911811168986,
+            1.0415631134673656e-07,
+            -3.4048515454350963e-10,
+            0.999998472400978
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.62,
+          "values": [
+            -0.001747911811168986,
+            1.0415631134673656e-07,
+            -3.4048515454350963e-10,
+            0.999998472400978
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.84,
+          "values": [
+            -0.001747911811168986,
+            1.0415631134673656e-07,
+            -3.4048515454350963e-10,
+            0.999998472400978
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.08,
+          "values": [
+            -0.04673088766798883,
+            1.0404268132705965e-07,
+            -9.103021752168904e-09,
+            0.9989075153074738
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.4,
+          "values": [
+            -0.06470268182174381,
+            1.0393821984912737e-07,
+            -1.2603868484907805e-08,
+            0.9979045861028316
+          ]
+        }
+      ]
+    },
+    {
+      "bone_id": "human:bone:003",
+      "property": "quaternion",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            -0.07727987010035733,
+            -6.25209294486034e-08,
+            -1.825696042263658e-08,
+            0.9970094391114196
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.24,
+          "values": [
+            -0.055129036038478345,
+            -6.261309850791332e-08,
+            -1.3023942460474132e-08,
+            0.9984792383347108
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.54,
+          "values": [
+            -0.03110198257615017,
+            -6.26781260297673e-08,
+            -7.347677541125564e-09,
+            0.9995162163165884
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.76,
+          "values": [
+            0.0003430009024493292,
+            -6.270845996795078e-08,
+            8.10343000483357e-11,
+            0.9999999411751868
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.87,
+          "values": [
+            0.0003430009024493292,
+            -6.270845996795078e-08,
+            8.10343000483357e-11,
+            0.9999999411751868
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.97,
+          "values": [
+            0.0003430009024493292,
+            -6.270845996795078e-08,
+            8.10343000483357e-11,
+            0.9999999411751868
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.08,
+          "values": [
+            0.0003430009024493292,
+            -6.270845996795078e-08,
+            8.10343000483357e-11,
+            0.9999999411751868
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.18,
+          "values": [
+            0.0003430009024493292,
+            -6.270845996795078e-08,
+            8.10343000483357e-11,
+            0.9999999411751868
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.3,
+          "values": [
+            0.0003430009024493292,
+            -6.270845996795078e-08,
+            8.10343000483357e-11,
+            0.9999999411751868
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.42,
+          "values": [
+            0.0003430009024493292,
+            -6.270845996795078e-08,
+            8.10343000483357e-11,
+            0.9999999411751868
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.62,
+          "values": [
+            0.0003430009024493292,
+            -6.270845996795078e-08,
+            8.10343000483357e-11,
+            0.9999999411751868
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.84,
+          "values": [
+            0.0003430009024493292,
+            -6.270845996795078e-08,
+            8.10343000483357e-11,
+            0.9999999411751868
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.08,
+          "values": [
+            -0.055129036038478345,
+            -6.261309850791332e-08,
+            -1.3023942460474132e-08,
+            0.9984792383347108
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.4,
+          "values": [
+            -0.07727987010035733,
+            -6.25209294486034e-08,
+            -1.825696042263658e-08,
+            0.9970094391114196
+          ]
+        }
+      ]
+    },
+    {
+      "bone_id": "human:bone:004",
+      "property": "quaternion",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            -0.09332365006314693,
+            -1.5771543022917658e-08,
+            -1.4716726420417488e-08,
+            0.9956358251584216
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.24,
+          "values": [
+            -0.07359305608143792,
+            -1.5797720478441425e-08,
+            -1.1605298615955228e-08,
+            0.9972883545377406
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.54,
+          "values": [
+            -0.05218593171959102,
+            -1.5819090343608427e-08,
+            -8.229489352712444e-09,
+            0.9986373859066954
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.76,
+          "values": [
+            -0.02415729752526781,
+            -1.5836052674144652e-08,
+            -3.809497142858521e-09,
+            0.999708169905736
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.87,
+          "values": [
+            -0.02415729752526781,
+            -1.5836052674144652e-08,
+            -3.809497142858521e-09,
+            0.999708169905736
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.97,
+          "values": [
+            -0.02415729752526781,
+            -1.5836052674144652e-08,
+            -3.809497142858521e-09,
+            0.999708169905736
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.08,
+          "values": [
+            -0.02415729752526781,
+            -1.5836052674144652e-08,
+            -3.809497142858521e-09,
+            0.999708169905736
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.18,
+          "values": [
+            -0.02415729752526781,
+            -1.5836052674144652e-08,
+            -3.809497142858521e-09,
+            0.999708169905736
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.3,
+          "values": [
+            -0.02415729752526781,
+            -1.5836052674144652e-08,
+            -3.809497142858521e-09,
+            0.999708169905736
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.42,
+          "values": [
+            -0.02415729752526781,
+            -1.5836052674144652e-08,
+            -3.809497142858521e-09,
+            0.999708169905736
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.62,
+          "values": [
+            -0.02415729752526781,
+            -1.5836052674144652e-08,
+            -3.809497142858521e-09,
+            0.999708169905736
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.84,
+          "values": [
+            -0.02415729752526781,
+            -1.5836052674144652e-08,
+            -3.809497142858521e-09,
+            0.999708169905736
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.08,
+          "values": [
+            -0.07359305608143792,
+            -1.5797720478441425e-08,
+            -1.1605298615955228e-08,
+            0.9972883545377406
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.4,
+          "values": [
+            -0.09332365006314693,
+            -1.5771543022917658e-08,
+            -1.4716726420417488e-08,
+            0.9956358251584216
+          ]
+        }
+      ]
+    },
+    {
+      "bone_id": "human:bone:053",
+      "property": "quaternion",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            0.34963660955821113,
+            8.790775107647845e-08,
+            8.240399715221824e-08,
+            0.9368853938751658
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.24,
+          "values": [
+            0.3327169435048545,
+            8.84839926118352e-08,
+            7.841629059727747e-08,
+            0.9430267416700197
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.54,
+          "values": [
+            0.31426583161994026,
+            8.907589756070875e-08,
+            7.406764568042377e-08,
+            0.9493350236224376
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.76,
+          "values": [
+            0.2899582418369623,
+            8.979878824887782e-08,
+            6.8338718483176e-08,
+            0.9570392980389076
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.87,
+          "values": [
+            0.2899582418369623,
+            8.979878824887782e-08,
+            6.8338718483176e-08,
+            0.9570392980389076
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.97,
+          "values": [
+            0.2899582418369623,
+            8.979878824887782e-08,
+            6.8338718483176e-08,
+            0.9570392980389076
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.08,
+          "values": [
+            0.2899582418369623,
+            8.979878824887782e-08,
+            6.8338718483176e-08,
+            0.9570392980389076
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.18,
+          "values": [
+            0.2899582418369623,
+            8.979878824887782e-08,
+            6.8338718483176e-08,
+            0.9570392980389076
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.3,
+          "values": [
+            0.2899582418369623,
+            8.979878824887782e-08,
+            6.8338718483176e-08,
+            0.9570392980389076
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.42,
+          "values": [
+            0.2899582418369623,
+            8.979878824887782e-08,
+            6.8338718483176e-08,
+            0.9570392980389076
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.62,
+          "values": [
+            0.2899582418369623,
+            8.979878824887782e-08,
+            6.8338718483176e-08,
+            0.9570392980389076
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.84,
+          "values": [
+            0.2899582418369623,
+            8.979878824887782e-08,
+            6.8338718483176e-08,
+            0.9570392980389076
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.08,
+          "values": [
+            0.3327169435048545,
+            8.84839926118352e-08,
+            7.841629059727747e-08,
+            0.9430267416700197
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.4,
+          "values": [
+            0.34963660955821113,
+            8.790775107647845e-08,
+            8.240399715221824e-08,
+            0.9368853938751658
+          ]
+        }
+      ]
+    },
+    {
+      "bone_id": "human:bone:054",
+      "property": "quaternion",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            -0.2030307282157064,
+            -6.275339512437216e-08,
+            -5.3889692054565316e-08,
+            0.979172366542374
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.24,
+          "values": [
+            -0.21593774033293697,
+            -6.257617627992334e-08,
+            -5.731555238673505e-08,
+            0.976407134498667
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.54,
+          "values": [
+            -0.2298778083136775,
+            -6.237188635027832e-08,
+            -6.101561290353852e-08,
+            0.9732194990056934
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.76,
+          "values": [
+            -0.24803576046949952,
+            -6.208550026195206e-08,
+            -6.583521076588871e-08,
+            0.96875087691744
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.87,
+          "values": [
+            -0.24803576046949952,
+            -6.208550026195206e-08,
+            -6.583521076588871e-08,
+            0.96875087691744
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.97,
+          "values": [
+            -0.24803576046949952,
+            -6.208550026195206e-08,
+            -6.583521076588871e-08,
+            0.96875087691744
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.08,
+          "values": [
+            -0.24803576046949952,
+            -6.208550026195206e-08,
+            -6.583521076588871e-08,
+            0.96875087691744
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.18,
+          "values": [
+            -0.24803576046949952,
+            -6.208550026195206e-08,
+            -6.583521076588871e-08,
+            0.96875087691744
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.3,
+          "values": [
+            -0.24803576046949952,
+            -6.208550026195206e-08,
+            -6.583521076588871e-08,
+            0.96875087691744
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.42,
+          "values": [
+            -0.24803576046949952,
+            -6.208550026195206e-08,
+            -6.583521076588871e-08,
+            0.96875087691744
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.62,
+          "values": [
+            -0.24803576046949952,
+            -6.208550026195206e-08,
+            -6.583521076588871e-08,
+            0.96875087691744
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.84,
+          "values": [
+            -0.24803576046949952,
+            -6.208550026195206e-08,
+            -6.583521076588871e-08,
+            0.96875087691744
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.08,
+          "values": [
+            -0.21593774033293697,
+            -6.257617627992334e-08,
+            -5.731555238673505e-08,
+            0.976407134498667
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.4,
+          "values": [
+            -0.2030307282157064,
+            -6.275339512437216e-08,
+            -5.3889692054565316e-08,
+            0.979172366542374
+          ]
+        }
+      ]
+    },
+    {
+      "bone_id": "human:bone:056",
+      "property": "quaternion",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            0.9890454761970098,
+            6.0541437184037085e-09,
+            1.646951594480156e-07,
+            0.1476111310647105
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.24,
+          "values": [
+            0.4357916562740706,
+            -0.04037375296686362,
+            0.006025672984608831,
+            0.899121395395725
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.54,
+          "values": [
+            0.1248178020121011,
+            0.3765954125441453,
+            -0.05620537983040546,
+            0.9162081460179738
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.76,
+          "values": [
+            0.4412,
+            0.1281,
+            -0.3888,
+            0.7986
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.87,
+          "values": [
+            0.26294198519731843,
+            0.23309942376627604,
+            -0.03478914781583687,
+            0.9355831797625326
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.97,
+          "values": [
+            0.26294198519731843,
+            0.23309942376627604,
+            -0.03478914781583687,
+            0.9355831797625326
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.08,
+          "values": [
+            0.26294198519731843,
+            0.23309942376627604,
+            -0.03478914781583687,
+            0.9355831797625326
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.18,
+          "values": [
+            0.26294198519731843,
+            0.23309942376627604,
+            -0.03478914781583687,
+            0.9355831797625326
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.3,
+          "values": [
+            0.26294198519731843,
+            0.23309942376627604,
+            -0.03478914781583687,
+            0.9355831797625326
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.42,
+          "values": [
+            0.26294198519731843,
+            0.23309942376627604,
+            -0.03478914781583687,
+            0.9355831797625326
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.62,
+          "values": [
+            0.26294198519731843,
+            0.23309942376627604,
+            -0.03478914781583687,
+            0.9355831797625326
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.84,
+          "values": [
+            0.26294198519731843,
+            0.23309942376627604,
+            -0.03478914781583687,
+            0.9355831797625326
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.08,
+          "values": [
+            0.4357916562740706,
+            -0.04037375296686362,
+            0.006025672984608831,
+            0.899121395395725
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.4,
+          "values": [
+            0.9890454761970098,
+            6.0541437184037085e-09,
+            1.646951594480156e-07,
+            0.1476111310647105
+          ]
+        }
+      ]
+    },
+    {
+      "bone_id": "human:bone:057",
+      "property": "quaternion",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            0.10003308494799172,
+            -0.0001307143511200468,
+            -1.313123793567998e-05,
+            0.9949841027157756
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.24,
+          "values": [
+            0.9300383799074956,
+            -0.003870838817074146,
+            0.037901424982535126,
+            0.3654820248523669
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.54,
+          "values": [
+            0.48049312704318026,
+            -0.08094624772713108,
+            0.8046289859606147,
+            0.33933207156877654
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.76,
+          "values": [
+            -0.12644307778538594,
+            -0.08054480983077535,
+            0.8004009860350096,
+            0.5804161810663686
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.87,
+          "values": [
+            -0.12644307778538594,
+            -0.08054480983077535,
+            0.8004009860350096,
+            0.5804161810663686
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.97,
+          "values": [
+            -0.12644307778538594,
+            -0.08054480983077535,
+            0.8004009860350096,
+            0.5804161810663686
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.08,
+          "values": [
+            -0.12644307778538594,
+            -0.08054480983077535,
+            0.8004009860350096,
+            0.5804161810663686
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.18,
+          "values": [
+            -0.12644307778538594,
+            -0.08054480983077535,
+            0.8004009860350096,
+            0.5804161810663686
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.3,
+          "values": [
+            -0.12644307778538594,
+            -0.08054480983077535,
+            0.8004009860350096,
+            0.5804161810663686
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.42,
+          "values": [
+            -0.12644307778538594,
+            -0.08054480983077535,
+            0.8004009860350096,
+            0.5804161810663686
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.62,
+          "values": [
+            -0.12644307778538594,
+            -0.08054480983077535,
+            0.8004009860350096,
+            0.5804161810663686
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.84,
+          "values": [
+            -0.12644307778538594,
+            -0.08054480983077535,
+            0.8004009860350096,
+            0.5804161810663686
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.08,
+          "values": [
+            0.9300383799074956,
+            -0.003870838817074146,
+            0.037901424982535126,
+            0.3654820248523669
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.4,
+          "values": [
+            0.10003308494799172,
+            -0.0001307143511200468,
+            -1.313123793567998e-05,
+            0.9949841027157756
+          ]
+        }
+      ]
+    },
+    {
+      "bone_id": "human:bone:058",
+      "property": "quaternion",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            -0.5865114484329295,
+            0.0005257146782139332,
+            -0.0002266999410983356,
+            0.8099407343061101
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.24,
+          "values": [
+            0.34684413791253654,
+            -0.29099752710787,
+            0.21025563806005484,
+            0.8664941718654392
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.54,
+          "values": [
+            -0.2671660425113467,
+            -0.7757334557043818,
+            0.5618844107601897,
+            0.10557376745403112
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.76,
+          "values": [
+            -0.9296488139560922,
+            0.18166948097101088,
+            -0.13086903827981505,
+            -0.2926133578862576
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.87,
+          "values": [
+            -0.9296488139560922,
+            0.18166948097101088,
+            -0.13086903827981505,
+            -0.2926133578862576
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.97,
+          "values": [
+            -0.9296488139560922,
+            0.18166948097101088,
+            -0.13086903827981505,
+            -0.2926133578862576
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.08,
+          "values": [
+            -0.9296488139560922,
+            0.18166948097101088,
+            -0.13086903827981505,
+            -0.2926133578862576
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.18,
+          "values": [
+            -0.9296488139560922,
+            0.18166948097101088,
+            -0.13086903827981505,
+            -0.2926133578862576
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.3,
+          "values": [
+            -0.9296488139560922,
+            0.18166948097101088,
+            -0.13086903827981505,
+            -0.2926133578862576
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.42,
+          "values": [
+            -0.9296488139560922,
+            0.18166948097101088,
+            -0.13086903827981505,
+            -0.2926133578862576
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.62,
+          "values": [
+            -0.9296488139560922,
+            0.18166948097101088,
+            -0.13086903827981505,
+            -0.2926133578862576
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.84,
+          "values": [
+            -0.9296488139560922,
+            0.18166948097101088,
+            -0.13086903827981505,
+            -0.2926133578862576
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.08,
+          "values": [
+            0.34684413791253654,
+            -0.29099752710787,
+            0.21025563806005484,
+            0.8664941718654392
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.4,
+          "values": [
+            -0.5865114484329295,
+            0.0005257146782139332,
+            -0.0002266999410983356,
+            0.8099407343061101
+          ]
+        }
+      ]
+    },
+    {
+      "bone_id": "human:bone:030",
+      "property": "quaternion",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            0.1921027490381106,
+            -0.6605153912069143,
+            0.26788369639181747,
+            0.674577109749682
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.24,
+          "values": [
+            -0.18397478734145348,
+            -0.5048684762726968,
+            0.8185851829454395,
+            0.2029270744650256
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.54,
+          "values": [
+            0.16428399371848024,
+            -0.43437433835367656,
+            0.8452268150800447,
+            0.2644264257924236
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.76,
+          "values": [
+            0.262654142466443,
+            -0.5651820269913067,
+            0.5913473478898085,
+            0.5117522759645583
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.87,
+          "values": [
+            0.2620549309634788,
+            -0.5655754998221693,
+            0.5910160031435349,
+            0.5120074718076592
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.97,
+          "values": [
+            0.262654142466443,
+            -0.5651820269913067,
+            0.5913473478898085,
+            0.5117522759645583
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.08,
+          "values": [
+            0.2620549309634788,
+            -0.5655754998221693,
+            0.5910160031435349,
+            0.5120074718076592
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.18,
+          "values": [
+            0.262654142466443,
+            -0.5651820269913067,
+            0.5913473478898085,
+            0.5117522759645583
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.3,
+          "values": [
+            0.2620541678034252,
+            -0.5658880317225188,
+            0.5902462323174303,
+            0.5125502257585555
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.42,
+          "values": [
+            0.262654142466443,
+            -0.5651820269913067,
+            0.5913473478898085,
+            0.5117522759645583
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.62,
+          "values": [
+            0.262654142466443,
+            -0.5651820269913067,
+            0.5913473478898085,
+            0.5117522759645583
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.84,
+          "values": [
+            0.2692162444888801,
+            -0.5324517061817513,
+            0.6560657027636291,
+            0.46216402709937415
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.08,
+          "values": [
+            -0.18086572310135388,
+            -0.5034413327012034,
+            0.8203293125274023,
+            0.20222322750708024
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.4,
+          "values": [
+            0.1921027490381106,
+            -0.6605153912069143,
+            0.26788369639181747,
+            0.674577109749682
+          ]
+        }
+      ]
+    },
+    {
+      "bone_id": "human:bone:031",
+      "property": "quaternion",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            0.021641413634521017,
+            -0.00028710469906093945,
+            0.00673817898865335,
+            0.9997430488534084
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.24,
+          "values": [
+            0.024688573885967915,
+            -0.0018412398862001356,
+            0.07952425370408983,
+            0.9965254523733782
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.54,
+          "values": [
+            0.15019022666173368,
+            -0.002462971362058197,
+            0.14757823204863774,
+            0.9775773601167148
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.76,
+          "values": [
+            0.7105896946931506,
+            -0.005259154716657944,
+            0.4571323404036818,
+            0.534850119607927
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.87,
+          "values": [
+            0.671004219467328,
+            -0.005055416135282875,
+            0.43451901484530225,
+            0.6007670147092041
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.97,
+          "values": [
+            0.7105896946931506,
+            -0.005259154716657944,
+            0.4571323404036818,
+            0.534850119607927
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.08,
+          "values": [
+            0.671004219467328,
+            -0.005055416135282875,
+            0.43451901484530225,
+            0.6007670147092041
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.18,
+          "values": [
+            0.7105896946931506,
+            -0.005259154716657944,
+            0.4571323404036818,
+            0.534850119607927
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.3,
+          "values": [
+            0.6805114795104146,
+            -0.00510683244268878,
+            0.4400525712146348,
+            0.5858598647153923
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.42,
+          "values": [
+            0.7105896946931506,
+            -0.005259154716657944,
+            0.4571323404036818,
+            0.534850119607927
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.62,
+          "values": [
+            0.7105896946931506,
+            -0.005259154716657944,
+            0.4571323404036818,
+            0.534850119607927
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.84,
+          "values": [
+            0.4474996604470832,
+            -0.003631815317848286,
+            0.2959296832081734,
+            0.8438936463877142
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.08,
+          "values": [
+            0.025096519402650244,
+            -0.0018357235691806029,
+            0.07939645717863025,
+            0.9965254625047631
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.4,
+          "values": [
+            0.021641413634521017,
+            -0.00028710469906093945,
+            0.00673817898865335,
+            0.9997430488534084
+          ]
+        }
+      ]
+    },
+    {
+      "bone_id": "human:bone:032",
+      "property": "quaternion",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            -0.008400410965549268,
+            5.969806943941861e-05,
+            -0.0093976523248074,
+            0.999920553675407
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.24,
+          "values": [
+            -0.680772419685795,
+            -0.06420574424889475,
+            -0.13714329061985037,
+            0.7166716492498867
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.54,
+          "values": [
+            -0.5926977895019561,
+            -0.5160305353757043,
+            -0.46751867529914887,
+            0.4047815523537211
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.76,
+          "values": [
+            -0.09316253203097816,
+            0.957096577476489,
+            -0.07172755955059756,
+            0.2648434277252952
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.87,
+          "values": [
+            -0.11552451260260042,
+            0.9541180918442832,
+            0.004974088100107383,
+            0.27620284620352503
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.97,
+          "values": [
+            -0.09316253203097816,
+            0.957096577476489,
+            -0.07172755955059756,
+            0.2648434277252952
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.08,
+          "values": [
+            -0.11552451260260042,
+            0.9541180918442832,
+            0.004974088100107383,
+            0.27620284620352503
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.18,
+          "values": [
+            -0.09316253203097816,
+            0.957096577476489,
+            -0.07172755955059756,
+            0.2648434277252952
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.3,
+          "values": [
+            -0.11070051194119145,
+            0.955292011602762,
+            -0.011695973139819182,
+            0.2739083303519981
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.42,
+          "values": [
+            -0.09316253203097816,
+            0.957096577476489,
+            -0.07172755955059756,
+            0.2648434277252952
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.62,
+          "values": [
+            -0.09316253203097816,
+            0.957096577476489,
+            -0.07172755955059756,
+            0.2648434277252952
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.84,
+          "values": [
+            -0.1866067345940755,
+            0.8992341358867192,
+            0.2592563888209999,
+            0.29890135549324043
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.08,
+          "values": [
+            -0.6829635877368154,
+            -0.06238939763379539,
+            -0.1344515406569532,
+            0.7152559570555993
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2.4,
+          "values": [
+            -0.008400410965549268,
+            5.969806943941861e-05,
+            -0.0093976523248074,
+            0.999920553675407
+          ]
+        }
+      ]
+    }
+  ],
+  "revision": 13,
+  "validation": {
+    "state": "valid",
+    "errors": []
+  },
+  "rest_transforms": [
+    {
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "quaternion": [
+        -0.7071067811865475,
+        1.519710892676797e-16,
+        1.519710892676797e-16,
+        0.7071067811865476
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "position": [
+        -3.841476672909993e-15,
+        0.050100228430799865,
+        0.9167001475843346
+      ],
+      "quaternion": [
+        0.7904683315163056,
+        2.775871021732045e-08,
+        3.582412795270222e-08,
+        0.612502911723549
+      ],
+      "scale": [
+        0.9999999999999959,
+        1.0000000685928367,
+        1.0000000797544164
+      ]
+    },
+    {
+      "position": [
+        4.3128289820644566e-15,
+        0.10397334466554353,
+        -2.445997338007544e-08
+      ],
+      "quaternion": [
+        -0.06470268182174378,
+        1.0393821984912738e-07,
+        -1.2603868484907803e-08,
+        0.9979045861028314
+      ],
+      "scale": [
+        0.9999999999999594,
+        1.00000000433456,
+        0.9999999491281566
+      ]
+    },
+    {
+      "position": [
+        4.249436427487014e-15,
+        0.1240350228702729,
+        -1.590999462730558e-08
+      ],
+      "quaternion": [
+        -0.07727987010035738,
+        -6.252092944860342e-08,
+        -1.8256960422636585e-08,
+        0.9970094391114198
+      ],
+      "scale": [
+        1.0000000000000293,
+        1.000000034175215,
+        0.9999999784128116
+      ]
+    },
+    {
+      "position": [
+        4.5410911438304825e-15,
+        0.14127188928518342,
+        -3.739133599967026e-08
+      ],
+      "quaternion": [
+        -0.0933236500631469,
+        -1.577154302291768e-08,
+        -1.4716726420417492e-08,
+        0.9956358251584215
+      ],
+      "scale": [
+        1.0000000000000053,
+        1.0000000410159833,
+        0.9999999848184683
+      ]
+    },
+    {
+      "position": [
+        0.018799982586124718,
+        0.12312941758727014,
+        0.10553934993689307
+      ],
+      "quaternion": [
+        -0.530811426703108,
+        -0.28815389581887596,
+        -0.31464863713562113,
+        0.7322586836711821
+      ],
+      "scale": [
+        1.0000000015106922,
+        0.9999998987436952,
+        0.9999999610795182
+      ]
+    },
+    {
+      "position": [
+        -3.495918177165436e-08,
+        0.20208463388267062,
+        1.0053347931915368e-07
+      ],
+      "quaternion": [
+        0.1921025966214776,
+        0.6605153533554204,
+        -0.26788366264719427,
+        0.6745772125264593
+      ],
+      "scale": [
+        0.9999999764245503,
+        1.0000001233484233,
+        0.9999999783252218
+      ]
+    },
+    {
+      "position": [
+        1.3488656258608955e-07,
+        0.29659470291208795,
+        1.8420630645832325e-09
+      ],
+      "quaternion": [
+        0.02164141840540997,
+        0.00028702369224851135,
+        -0.0067381862390455275,
+        0.9997430487245319
+      ],
+      "scale": [
+        1.0000000534574138,
+        1.0000000828951185,
+        1.0000000465828263
+      ]
+    },
+    {
+      "position": [
+        -5.295456584342162e-08,
+        0.2797881575014119,
+        1.8055971717778618e-09
+      ],
+      "quaternion": [
+        -0.008400349401484397,
+        -5.9707781546656584e-05,
+        0.009397654099729046,
+        0.9999205541753481
+      ],
+      "scale": [
+        0.9999999715702368,
+        0.9999999514862603,
+        0.999999933548536
+      ]
+    },
+    {
+      "position": [
+        0.0037837102176336845,
+        0.10153493455511753,
+        0.049489734551770574
+      ],
+      "quaternion": [
+        0.061252165598945814,
+        0.7044514955905842,
+        0.06125236721324917,
+        0.7044461732302454
+      ],
+      "scale": [
+        0.9999999744083164,
+        0.9999998992978535,
+        0.9999999999874186
+      ]
+    },
+    {
+      "position": [
+        -6.129900476103955e-10,
+        0.03884478064129504,
+        2.35195282805023e-07
+      ],
+      "quaternion": [
+        -5.5038060281266474e-08,
+        -2.0795182590870977e-08,
+        0.010772923659097022,
+        0.9999419703741972
+      ],
+      "scale": [
+        0.9999999929459937,
+        0.9999999921615993,
+        0.9999999403955859
+      ]
+    },
+    {
+      "position": [
+        -2.72823987568227e-08,
+        0.029880858607575722,
+        -1.0612348932959037e-07
+      ],
+      "quaternion": [
+        -5.886981717643781e-08,
+        9.130897253525137e-10,
+        0.010879145315107043,
+        0.9999408203474891
+      ],
+      "scale": [
+        0.9999999940889991,
+        0.9999999901829238,
+        1
+      ]
+    },
+    {
+      "position": [
+        -2.43772724228819e-10,
+        0.02408792979428731,
+        -1.8058750894667241e-07
+      ],
+      "quaternion": [
+        5.844538048590401e-07,
+        -9.141181165095862e-09,
+        -0.10817293595573181,
+        0.9941320917898061
+      ],
+      "scale": [
+        1.0000000401458797,
+        1.0000001167560895,
+        1.0000000596046517
+      ]
+    },
+    {
+      "position": [
+        0.0013832959926129984,
+        0.10658730385115311,
+        0.023180272130880274
+      ],
+      "quaternion": [
+        0.018655198178123646,
+        0.7068634066814042,
+        0.018655264048176513,
+        0.7068578986735481
+      ],
+      "scale": [
+        1.0000000020300464,
+        0.9999999959821816,
+        0.9999999999860398
+      ]
+    },
+    {
+      "position": [
+        5.644090320111594e-09,
+        0.04296956715989397,
+        2.1844407127602494e-07
+      ],
+      "quaternion": [
+        -1.3808115673390603e-08,
+        -2.5813589780907967e-08,
+        0.0021880934668226824,
+        0.9999976061206245
+      ],
+      "scale": [
+        0.9999999356942211,
+        0.9999998755962785,
+        1.0000000000002944
+      ]
+    },
+    {
+      "position": [
+        -2.0129848565808572e-08,
+        0.032429205551756324,
+        -2.5285031601818275e-07
+      ],
+      "quaternion": [
+        -1.363894269114497e-07,
+        1.8190962464291176e-09,
+        0.024180741345847977,
+        0.9997076031260074
+      ],
+      "scale": [
+        0.9999999819109181,
+        1.0000000368730957,
+        1
+      ]
+    },
+    {
+      "position": [
+        -1.2525502357529916e-08,
+        0.031328030486999725,
+        2.1370215019800298e-07
+      ],
+      "quaternion": [
+        2.973178661261259e-07,
+        -3.971007522263658e-09,
+        -0.05273232444736347,
+        0.9986086830977835
+      ],
+      "scale": [
+        0.9999999613693105,
+        1.0000000913210056,
+        1.0000000000000002
+      ]
+    },
+    {
+      "position": [
+        0.0033830375990355765,
+        0.0995438881966445,
+        -0.03165742865035015
+      ],
+      "quaternion": [
+        -0.02771878521480246,
+        0.7065661153720144,
+        -0.02771888904262136,
+        0.7065604408733096
+      ],
+      "scale": [
+        0.9999999287879225,
+        0.9999996999670527,
+        0.9999998807753083
+      ]
+    },
+    {
+      "position": [
+        1.2930035514502336e-09,
+        0.034464891551904686,
+        1.566969631827675e-07
+      ],
+      "quaternion": [
+        8.45315704574876e-08,
+        -1.5186077181080665e-07,
+        -0.013902137323586066,
+        0.999903360619318
+      ],
+      "scale": [
+        1.000000013311591,
+        1.0000000174231658,
+        1.0000000000017428
+      ]
+    },
+    {
+      "position": [
+        4.99018431611431e-09,
+        0.027501369469186576,
+        -1.4341680953933178e-08
+      ],
+      "quaternion": [
+        -7.278980654355828e-08,
+        1.152976256336429e-09,
+        0.012939035001166723,
+        0.9999162871826988
+      ],
+      "scale": [
+        0.9999999900056862,
+        1.000000046168681,
+        0.9999999999999997
+      ]
+    },
+    {
+      "position": [
+        -2.488481288392963e-08,
+        0.026417758510648204,
+        1.6993174467572203e-07
+      ],
+      "quaternion": [
+        -2.2612952265741815e-07,
+        3.5917311172563838e-09,
+        0.04016264217318464,
+        0.9991931555878559
+      ],
+      "scale": [
+        0.9999999491294503,
+        0.9999999975648648,
+        1.0000000000000002
+      ]
+    },
+    {
+      "position": [
+        0.0016835749560040192,
+        0.1043917846523319,
+        -0.006433717068828559
+      ],
+      "quaternion": [
+        -0.012588597482984302,
+        0.7069974692678453,
+        -0.012588643209123859,
+        0.7069919601496732
+      ],
+      "scale": [
+        1.0000000573340748,
+        1.0000000019425037,
+        1.0000000595906569
+      ]
+    },
+    {
+      "position": [
+        2.0982514323253376e-08,
+        0.03932513076263533,
+        -9.068180495397371e-08
+      ],
+      "quaternion": [
+        -1.0873628495708141e-07,
+        -1.4706591650717902e-07,
+        0.01974715039856403,
+        0.9998050060142242
+      ],
+      "scale": [
+        0.9999998913571894,
+        0.9999998863454966,
+        0.9999999403969956
+      ]
+    },
+    {
+      "position": [
+        2.725077982712598e-09,
+        0.030595616523914182,
+        -4.014146948172481e-08
+      ],
+      "quaternion": [
+        -2.170363420563338e-08,
+        3.070159804249768e-10,
+        0.004021944930194121,
+        0.9999919119467807
+      ],
+      "scale": [
+        0.999999964991841,
+        0.9999999044034212,
+        1
+      ]
+    },
+    {
+      "position": [
+        -1.015150134786591e-08,
+        0.029985484911991378,
+        2.793952691426682e-08
+      ],
+      "quaternion": [
+        3.219636980710051e-08,
+        -4.5484707613168175e-10,
+        -0.0059665416681508,
+        0.9999822000318412
+      ],
+      "scale": [
+        0.9999999672659943,
+        0.9999999687192124,
+        0.999999940395352
+      ]
+    },
+    {
+      "position": [
+        0.02279958744625321,
+        0.020290567806611648,
+        0.03969491438580794
+      ],
+      "quaternion": [
+        0.24977708333153253,
+        0.9173589894550302,
+        0.30027697753390625,
+        0.07679603302001878
+      ],
+      "scale": [
+        0.9999999505967385,
+        1.0000002970675688,
+        1.0000000063175318
+      ]
+    },
+    {
+      "position": [
+        -1.4467438025356216e-07,
+        0.04658503985049391,
+        -1.0980811510075128e-08
+      ],
+      "quaternion": [
+        0.08269513739273655,
+        -0.004105236127723185,
+        0.008712722895780064,
+        0.9965283486901542
+      ],
+      "scale": [
+        0.9999999855981214,
+        0.9999999952449204,
+        1.0000000417003898
+      ]
+    },
+    {
+      "position": [
+        1.432861407302255e-07,
+        0.04714241315931095,
+        3.8445233269254406e-08
+      ],
+      "quaternion": [
+        0.038973914319062504,
+        -0.006633301521906881,
+        0.022494955991876262,
+        0.9989649694970054
+      ],
+      "scale": [
+        1.0000001382226176,
+        0.9999998910742622,
+        0.9999999112580534
+      ]
+    },
+    {
+      "position": [
+        7.045735861410662e-08,
+        0.03484703392385699,
+        -5.5236747995013324e-08
+      ],
+      "quaternion": [
+        0.03289770055172166,
+        -0.009022393585322804,
+        -0.03962904975668198,
+        0.9986320023615535
+      ],
+      "scale": [
+        1.0000001129026435,
+        1.0000000303736838,
+        1.0000001332608646
+      ]
+    },
+    {
+      "position": [
+        -0.018799985138644143,
+        0.12312942124473913,
+        0.1055393405711616
+      ],
+      "quaternion": [
+        -0.5308115196596056,
+        0.2881538137047833,
+        0.31464854921130736,
+        0.7322586974283048
+      ],
+      "scale": [
+        0.9999999625504651,
+        0.9999999876029174,
+        0.9999999684898663
+      ]
+    },
+    {
+      "position": [
+        -2.231049606171709e-08,
+        0.20208465415125615,
+        1.8421397496304337e-07
+      ],
+      "quaternion": [
+        0.19210274840393493,
+        -0.6605153890264001,
+        0.2678836955074713,
+        0.6745771075227468
+      ],
+      "scale": [
+        0.9999998530326254,
+        0.999999762635416,
+        0.9999998275195656
+      ]
+    },
+    {
+      "position": [
+        -8.468072931755444e-08,
+        0.29659465898275306,
+        8.572247654770049e-09
+      ],
+      "quaternion": [
+        0.021641413634521156,
+        -0.0002871046990609413,
+        0.006738178988653394,
+        0.9997430488534149
+      ],
+      "scale": [
+        0.9999999961970517,
+        0.9999999517758057,
+        1.0000000298931302
+      ]
+    },
+    {
+      "position": [
+        -2.693672755960108e-07,
+        0.2797882372138818,
+        5.412781681202183e-09
+      ],
+      "quaternion": [
+        -0.00840041096554927,
+        5.969806943941862e-05,
+        -0.009397652324807399,
+        0.9999205536754071
+      ],
+      "scale": [
+        0.9999999086644124,
+        0.9999999562313919,
+        0.9999999399163313
+      ]
+    },
+    {
+      "position": [
+        -0.003783679206065038,
+        0.10153504118697709,
+        0.04948973270426944
+      ],
+      "quaternion": [
+        0.06125209608890649,
+        -0.7044514557146137,
+        -0.061252346559258326,
+        0.7044462197237842
+      ],
+      "scale": [
+        1.0000000707882235,
+        1.0000000055513925,
+        0.9999999999850727
+      ]
+    },
+    {
+      "position": [
+        1.8282842823014178e-08,
+        0.03884495732880344,
+        -8.648214722128955e-08
+      ],
+      "quaternion": [
+        -5.925823001647125e-08,
+        4.835231734838899e-08,
+        -0.010772922297311228,
+        0.9999419703888671
+      ],
+      "scale": [
+        0.9999999912857943,
+        0.9999999288213871,
+        1.000000000000536
+      ]
+    },
+    {
+      "position": [
+        -2.2455979187263608e-08,
+        0.029880921577813746,
+        1.2957016681802713e-07
+      ],
+      "quaternion": [
+        -6.08420599425623e-08,
+        1.1957910428830799e-09,
+        -0.010879190104499894,
+        0.9999408198601888
+      ],
+      "scale": [
+        1.0000000315344881,
+        0.9999999075345227,
+        0.9999999999999999
+      ]
+    },
+    {
+      "position": [
+        4.775602766016185e-08,
+        0.024087863186794012,
+        -5.878927811231449e-08
+      ],
+      "quaternion": [
+        6.061549286364182e-07,
+        -1.2204848202888452e-08,
+        0.10817285179785231,
+        0.994132100947129
+      ],
+      "scale": [
+        0.9999999204145495,
+        0.9999999056369312,
+        0.9999999999999994
+      ]
+    },
+    {
+      "position": [
+        -0.0013834068465332638,
+        0.10658733949400734,
+        0.023180268908168836
+      ],
+      "quaternion": [
+        0.018655230322149583,
+        -0.7068633636265462,
+        -0.018655308941752942,
+        0.706857939717795
+      ],
+      "scale": [
+        1.0000001019026619,
+        1.0000001010299568,
+        0.999999999983751
+      ]
+    },
+    {
+      "position": [
+        -6.89681622922933e-09,
+        0.04296931637263679,
+        -1.356207233182971e-07
+      ],
+      "quaternion": [
+        -1.3447956789890903e-08,
+        4.163190944556926e-08,
+        -0.002188072424408451,
+        0.9999976061666666
+      ],
+      "scale": [
+        0.9999999365291434,
+        0.9999999961527284,
+        1.0000000000004898
+      ]
+    },
+    {
+      "position": [
+        -4.578558060464033e-09,
+        0.03242926022575032,
+        9.671444667347373e-08
+      ],
+      "quaternion": [
+        -1.4128657961940345e-07,
+        2.4704592202073084e-09,
+        -0.024180772185841953,
+        0.9997076023800542
+      ],
+      "scale": [
+        0.9999999600247647,
+        1.000000018424249,
+        1
+      ]
+    },
+    {
+      "position": [
+        9.232397235603429e-09,
+        0.031328049350828446,
+        -1.2457306275415192e-07
+      ],
+      "quaternion": [
+        3.082674975044695e-07,
+        -5.424584031154947e-09,
+        0.05273235069728882,
+        0.998608681711632
+      ],
+      "scale": [
+        1.0000000013878454,
+        1.0000000037423276,
+        0.9999999999999996
+      ]
+    },
+    {
+      "position": [
+        -0.0033827830162662664,
+        0.09954390682502079,
+        -0.03165742969010464
+      ],
+      "quaternion": [
+        -0.027718766845767757,
+        -0.7065660735495403,
+        0.027718890127383284,
+        0.7065604835152122
+      ],
+      "scale": [
+        1.0000000707391006,
+        1.0000000714054418,
+        0.9999999999823859
+      ]
+    },
+    {
+      "position": [
+        3.4597295653360227e-09,
+        0.03446498095335793,
+        3.159684514031369e-08
+      ],
+      "quaternion": [
+        8.399657533734948e-08,
+        3.298580601332484e-08,
+        0.01390219948920402,
+        0.9999033597550085
+      ],
+      "scale": [
+        1.000000008683569,
+        1.0000000683445953,
+        1.0000000000004228
+      ]
+    },
+    {
+      "position": [
+        1.1770117491760601e-08,
+        0.027501175853196225,
+        2.1292260021787968e-07
+      ],
+      "quaternion": [
+        -7.89272297141667e-08,
+        1.37047223850127e-09,
+        -0.012939251295025687,
+        0.9999162843838066
+      ],
+      "scale": [
+        1.0000000203597594,
+        1.000000020058048,
+        0.9999999999999998
+      ]
+    },
+    {
+      "position": [
+        -1.6190793039605467e-08,
+        0.02641789923950999,
+        1.674990923739017e-08
+      ],
+      "quaternion": [
+        -2.447602118099542e-07,
+        4.2196142961942894e-09,
+        -0.040162536430149866,
+        0.9991931598381951
+      ],
+      "scale": [
+        1.0000000193038738,
+        0.9999999595071407,
+        1.0000000000000002
+      ]
+    },
+    {
+      "position": [
+        -0.0016833178345700972,
+        0.10439187344771528,
+        -0.006433727188135618
+      ],
+      "quaternion": [
+        -0.012588619672636038,
+        -0.7069974266243457,
+        0.012588672935816378,
+        0.7069920018488773
+      ],
+      "scale": [
+        1.0000000040606014,
+        0.9999998254143174,
+        0.9999999999838045
+      ]
+    },
+    {
+      "position": [
+        -4.104980459718188e-09,
+        0.03932495187828644,
+        3.937849153423656e-07
+      ],
+      "quaternion": [
+        -1.1570638483371132e-07,
+        3.861236224290526e-08,
+        -0.01974723775465153,
+        0.9998050042888595
+      ],
+      "scale": [
+        0.9999999433760242,
+        0.9999999425525603,
+        1.0000000000004332
+      ]
+    },
+    {
+      "position": [
+        -5.5925483549712496e-09,
+        0.030595549950725,
+        -1.62610269027752e-07
+      ],
+      "quaternion": [
+        -2.3532366714242003e-08,
+        4.038137720107154e-10,
+        -0.004021938770939375,
+        0.999991911971553
+      ],
+      "scale": [
+        0.9999999622949804,
+        0.9999999620803486,
+        1
+      ]
+    },
+    {
+      "position": [
+        -4.152815452629355e-10,
+        0.0299854902934773,
+        1.857038842700831e-07
+      ],
+      "quaternion": [
+        3.491141600389217e-08,
+        -5.993226759414758e-10,
+        0.00596653853732129,
+        0.9999822000505216
+      ],
+      "scale": [
+        0.9999999713249834,
+        0.9999999120436978,
+        0.9999999999999999
+      ]
+    },
+    {
+      "position": [
+        -0.022799642493108063,
+        0.02029080481823342,
+        0.03969499300029462
+      ],
+      "quaternion": [
+        -0.2497769995734885,
+        0.91735900132278,
+        0.3002769467400362,
+        -0.07679628518009422
+      ],
+      "scale": [
+        0.9999999824188716,
+        0.9999999813170624,
+        1.0000001404933112
+      ]
+    },
+    {
+      "position": [
+        -1.1192416859984178e-07,
+        0.046584944487971736,
+        -4.720778984217133e-08
+      ],
+      "quaternion": [
+        0.08269532587687291,
+        0.004105303297114086,
+        -0.00871341542849296,
+        0.9965283267314936
+      ],
+      "scale": [
+        1.0000000355307512,
+        0.9999999109805704,
+        1.000000018708406
+      ]
+    },
+    {
+      "position": [
+        1.2727768616827007e-08,
+        0.047142401972849385,
+        -4.5005482891651016e-08
+      ],
+      "quaternion": [
+        0.038973598026988424,
+        0.00663321318759138,
+        -0.02249376482234216,
+        0.9989650092495832
+      ],
+      "scale": [
+        1.000000101152257,
+        1.0000000839670726,
+        1.0000001765637498
+      ]
+    },
+    {
+      "position": [
+        -1.9207206558569112e-07,
+        0.034846982788844016,
+        1.5788326687693477e-09
+      ],
+      "quaternion": [
+        0.0328977579980254,
+        0.0090223413938572,
+        0.03962897118605842,
+        0.9986320040596459
+      ],
+      "scale": [
+        0.9999998809238051,
+        0.99999980238155,
+        0.9999998377698155
+      ]
+    },
+    {
+      "position": [
+        2.157606368959411e-14,
+        0.17480080487404503,
+        -2.3000812643392265e-08
+      ],
+      "quaternion": [
+        0.349636609558211,
+        8.790775107647844e-08,
+        8.240399715221818e-08,
+        0.9368853938751656
+      ],
+      "scale": [
+        0.9999999999999555,
+        0.9999999248212645,
+        0.9999999780374905
+      ]
+    },
+    {
+      "position": [
+        -2.1000111461009932e-14,
+        0.1320645061370549,
+        2.4087649319604054e-08
+      ],
+      "quaternion": [
+        -0.20303072821570642,
+        -6.275339512437215e-08,
+        -5.388969205456531e-08,
+        0.9791723665423739
+      ],
+      "scale": [
+        1.000000000000034,
+        0.9999999729849676,
+        1.0000000036143137
+      ]
+    },
+    {
+      "position": [
+        2.437980157409101e-15,
+        0.06980967914616065,
+        8.915211069382423e-10
+      ],
+      "quaternion": [
+        -0.04706995310436093,
+        1.8538060240554518e-08,
+        -1.0350538079053523e-08,
+        0.9988915954770831
+      ],
+      "scale": [
+        0.9999999999999917,
+        0.9999999702057283,
+        0.9999999755582573
+      ]
+    },
+    {
+      "position": [
+        0.08899997430302051,
+        0.027770853931511796,
+        0.04602379499619921
+      ],
+      "quaternion": [
+        0.9890454761969235,
+        6.05414371840318e-09,
+        1.646951594480012e-07,
+        0.14761113106469761
+      ],
+      "scale": [
+        0.9999999999999749,
+        0.9999998571817851,
+        0.9999944540388374
+      ]
+    },
+    {
+      "position": [
+        -1.3676956969743692e-08,
+        0.40662564073032237,
+        2.0248449583704087e-09
+      ],
+      "quaternion": [
+        0.10003308494799171,
+        -0.0001307143511200468,
+        -1.313123793567998e-05,
+        0.9949841027157755
+      ],
+      "scale": [
+        0.9999999655452181,
+        0.9999999744526954,
+        0.9999999831795641
+      ]
+    },
+    {
+      "position": [
+        1.9071288159810962e-08,
+        0.4331935955331402,
+        1.3585556582484948e-08
+      ],
+      "quaternion": [
+        -0.586511448432927,
+        0.000525714678213931,
+        -0.00022669994109833464,
+        0.8099407343061067
+      ],
+      "scale": [
+        1.0000000346298008,
+        0.9999999933542583,
+        1.0000000428225078
+      ]
+    },
+    {
+      "position": [
+        -1.0401979014251772e-08,
+        0.1814087428568348,
+        6.0379051203263145e-09
+      ],
+      "quaternion": [
+        0.0001110998884486639,
+        0.9767429489296938,
+        -0.21441302156426797,
+        0.000505526072618449
+      ],
+      "scale": [
+        0.9999999998249002,
+        1.0000000469799326,
+        0.9999999205298709
+      ]
+    },
+    {
+      "position": [
+        -1.382148621942303e-08,
+        0.08628798268104747,
+        1.5681895330910134e-09
+      ],
+      "quaternion": [
+        0.027500626739903146,
+        -5.373432471650187e-08,
+        1.2100077182229974e-08,
+        0.9996217862416312
+      ],
+      "scale": [
+        1.000000000000048,
+        0.999999926362747,
+        0.9999999209114679
+      ]
+    },
+    {
+      "position": [
+        -0.08899996368811985,
+        0.027770855664633443,
+        0.04602377833337995
+      ],
+      "quaternion": [
+        0.9890454761969342,
+        -2.950228069925947e-08,
+        -7.354582108012458e-08,
+        0.147611131064696
+      ],
+      "scale": [
+        0.999999999999975,
+        0.9999998571817851,
+        0.9999944540388374
+      ]
+    },
+    {
+      "position": [
+        1.0447778170386002e-08,
+        0.40662564402617773,
+        -5.278239054162803e-09
+      ],
+      "quaternion": [
+        0.1000330849493211,
+        0.00013071334099451522,
+        1.3121107896568289e-05,
+        0.9949841027159081
+      ],
+      "scale": [
+        0.999999965545211,
+        0.9999999744526963,
+        0.9999999831795624
+      ]
+    },
+    {
+      "position": [
+        -1.9071192999819964e-08,
+        0.4331935978664084,
+        1.3956936828485311e-08
+      ],
+      "quaternion": [
+        -0.5865114484329363,
+        -0.0005257146983828488,
+        0.00022669992810933395,
+        0.8099407343060944
+      ],
+      "scale": [
+        1.0000000346297944,
+        0.9999999933542654,
+        1.0000000428225158
+      ]
+    },
+    {
+      "position": [
+        1.0401972602713805e-08,
+        0.18140873540568672,
+        6.027831470079015e-09
+      ],
+      "quaternion": [
+        -0.00011109989008594179,
+        0.9767429489296973,
+        -0.21441302156426723,
+        -0.0005055260658286242
+      ],
+      "scale": [
+        0.9999999998248998,
+        1.0000000469799324,
+        0.9999999205298706
+      ]
+    },
+    {
+      "position": [
+        1.3821486205545241e-08,
+        0.08628798268104768,
+        1.568191940887198e-09
+      ],
+      "quaternion": [
+        0.027500626739903146,
+        5.373432021957411e-08,
+        -1.2100077149958032e-08,
+        0.9996217862416312
+      ],
+      "scale": [
+        1.000000000000048,
+        0.999999926362747,
+        0.9999999209114679
+      ]
+    }
+  ]
+}
