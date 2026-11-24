@@ -59,3 +59,31 @@ The exact committed clip still needs a live app window with the Human rig loaded
 5. Export and reimport that exact AnimationDocument and compare duration, rig fingerprint, bone IDs and representative keyframes. Preserve the current committed library entry unless the user asks to remove it.
 
 Until those steps pass, treat visual-quality and exact-clip round-trip acceptance as **BLOCKED**. The code/test branch is clean and buildable; this is a native acceptance gate, not a clean-tree failure.
+
+## Correction and closed acceptance (2026-11-24, OpenCode)
+
+The channel values in this report are wrong for the elbow: `lowerarm_l.z = +60°` folds the forearm
+**behind** the head. A 9-angle elbow probe (`elbow-grid-contact-sheet.png`, real MCP images) showed the
+anatomically correct forward bend is **negative**: `lowerarm_l.z ≈ −60°` with `upperarm_l.z = 95°`
+puts the forearm vertical beside the head. The user was right that the earlier clip contorted the
+elbow. A second grid with that corrected elbow showed the palm stays toward the camera for
+`hand_l.y` in roughly −45…+45°, so a small ±30° rock is sufficient; large elbow swings must never be
+used to wave.
+
+Corrected clip: **`Greeting Wave v3`** (`custom-import-5`, 66 tracks, revision 7), authored with
+`upperarm_l.z=95`, `lowerarm_l.z=−60` constant, `upperarm_r.z=82`, `lowerarm_r.z=8`,
+`hand_l.y=−30/+30` every 0.25 s.
+
+Two problems in the install candidate were also fixed:
+1. The integration `dist` was the reverted chunk-split bundle; rebuilding it from the final frontend
+   HEAD restored native startup (`M2M_HOST enabled=true`, `frontend_ready=true`). A stale `dist`
+   makes WebKit spin with no MCP socket.
+2. The MCP tools gave agents no anatomical conventions, forcing axis guessing from pixels.
+   Commit `67d4f85d` publishes validated Human pose conventions and camera-direction caveats in the
+   `animation_set_bone_keyframes` / `animation_observe_pose` tool descriptions, verified in `tools/list`.
+
+Native acceptance for the corrected pose is now **PASS**: front/right/top observations at
+t=0.00/0.25/0.50 with matching rig fingerprint `1a167d80…` and distinct digests, exact
+export/reimport round-trip (5 tracks / 45 keys / 2 s / same rig), and clean session cancellation.
+Evidence: `coordination/audits/M2M-030/mcp-greeting-wave-acceptance.ndjson` and
+`artifacts/M2M-030/greeting-wave/acceptance/`. Final visual sign-off by the user is still required.
