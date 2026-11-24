@@ -47,3 +47,15 @@ The front render looks anatomically improved, but the current fresh run did not 
 - Rebuilt debug desktop SHA-256: `b8b61d1df3e1043165487e860d4cd7180b2faf7e2c68f1ea8d3ad8711a2de0c5`; MCP sidecar SHA-256: `87218aa85eea1ea6a08780f70d55712f8fa968b9cc22edfac380c9d0eb149b7e`.
 - The isolated desktop integration branch and frontend integration branch are clean after commit. The OpenCode dependency symlink remains local-only and is excluded through that worktree’s `.git/info/exclude`; it was neither staged nor removed.
 - No packages were installed. No release package was installed. Canonical branches were not modified.
+
+## Remaining native acceptance steps
+
+The exact committed clip still needs a live app window with the Human rig loaded to finish the blocked cross-view/export check:
+
+1. Run `./run-integration.sh` from this desktop worktree and load the Human rig in the native app. Keep that app open while the MCP client runs.
+2. Confirm `skeleton_get_catalog` returns the Human fingerprint recorded above, then select and play `Greeting Wave` from the native animation library.
+3. Inspect the saved 0.00 s and 0.25 s front frames and the native playback. Confirm the elbow stays naturally flexed through the wrist sway and the palm faces the front camera; inspect the side view for forearm/elbow alignment.
+4. Use the MCP observation tools on the matching draft at 0.00, 0.25 and 0.50 seconds and save front/right/top images with their synchronized joint projections. Compare repeated observations for matching pose digest and elbow/wrist positions.
+5. Export and reimport that exact AnimationDocument and compare duration, rig fingerprint, bone IDs and representative keyframes. Preserve the current committed library entry unless the user asks to remove it.
+
+Until those steps pass, treat visual-quality and exact-clip round-trip acceptance as **BLOCKED**. The code/test branch is clean and buildable; this is a native acceptance gate, not a clean-tree failure.
