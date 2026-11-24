@@ -271,7 +271,7 @@ impl Mesh2MotionMcp {
             if !catalog.bones.iter().any(|bone| &bone.id == bone_id) {
                 return fail(
                     "UNSUPPORTED_BONE",
-                    "focus_bone_id is not present in the live rig",
+                    "focus_bone_id must be a bone id from the live rig skeleton (see animation_skeleton_catalog)",
                 );
             }
         }
@@ -293,12 +293,18 @@ impl Mesh2MotionMcp {
                 ) || !unique_views.insert(v)
             })
         {
-            return fail("BAD_REQUEST", "views must be unique supported camera names");
+            return fail(
+                "BAD_REQUEST",
+                "each view must be one of: front, back, left, right, top, bottom (1..6 unique)",
+            );
         }
         if args.width.is_some_and(|v| !(64..=1024).contains(&v))
             || args.height.is_some_and(|v| !(64..=1024).contains(&v))
         {
-            return fail("BAD_REQUEST", "image dimensions must be 64..1024");
+            return fail(
+                "BAD_REQUEST",
+                "image width/height must each be 64..1024 px (default 512)",
+            );
         }
         if args
             .projection
@@ -309,7 +315,10 @@ impl Mesh2MotionMcp {
         }
         let image_mime = args.image_mime.as_deref().unwrap_or("image/png");
         if !matches!(image_mime, "image/png" | "image/jpeg") {
-            return fail("BAD_REQUEST", "image MIME type is unsupported");
+            return fail(
+                "BAD_REQUEST",
+                "image_mime must be \"image/png\" or \"image/jpeg\"",
+            );
         }
         // Allow the contract maximum per image. Inline bytes are only optional;
         // the frontend strips them when the complete observation approaches the
@@ -553,7 +562,10 @@ impl Mesh2MotionMcp {
             args.view.as_str(),
             "front" | "back" | "left" | "right" | "top" | "bottom"
         ) {
-            return fail("BAD_REQUEST", "unsupported view");
+            return fail(
+                "BAD_REQUEST",
+                "view must be one of: front, back, left, right, top, bottom",
+            );
         }
         let now = chrono::Utc::now().timestamp_millis().max(0) as u64;
         let capture = match self.observation_captures.lock() {
@@ -1914,7 +1926,7 @@ impl Mesh2MotionMcp {
 
     #[tool(
         name = "animation_capture_view",
-        description = "Return an actual retained camera image as MCP image content with matching camera matrices, joint projections, rig fingerprint, revision and timestamp."
+        description = "Return an actual retained camera image as MCP image content with matching camera matrices, joint projections, rig fingerprint, revision and timestamp. The capture_id MUST come from a prior animation_observe_pose call in this draft, and view must be one of the views that call retained (front/back/left/right/top/bottom). animation_observe_pose returns only joint-projection metadata (no pixels); call this to see the actual image and judge limb/palm orientation before committing."
     )]
     pub async fn animation_capture_view(
         &self,
