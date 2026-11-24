@@ -1,0 +1,40 @@
+# M2M-030B — MCP authoring/observation gaps and GUI-observation fix
+
+Date: 2026-11-24
+Branches: desktop `m2m-030b-integration`, frontend `m2m-030b-integration-frontend`
+
+## User requirement
+
+The agent must author with the **New Animation** tab visible so the user can observe the procedure
+and correct or modify the animation before saving. Mouse/keyboard injection into the desktop is a
+**no-go** — it hijacks the user's pointer, is slow, and the app runs on native Wayland where X11
+automation cannot see it.
+
+## MCP problems found (all observed live, not hypothetical)
+
+| # | Problem | Root cause | Fix / status |
+| --- | --- | --- | --- |
+| 1 | Agent cannot know which local bone axis raises an arm, flexes an elbow or turns a palm. Repeated attempts produced contorted elbows and a non-waving pose. | MCP exposed raw bone IDs and quaternions with **no anatomical conventions**; tool descriptions were minimal. | CLOSED — desktop `67d4f85d` publishes validated Human conventions in `animation_set_bone_keyframes` (rest·delta, `upperarm_l.z` raises, `lowerarm_l.z` **negative** ≈ −60° flexes forward, `hand_l.y` ±30° rocks the palm) and in `animation_observe_pose` (world-aligned camera directions, Human faces +Z so `front` can show the back). Verified in a real `tools/list` exchange. |
+| 2 | MCP draft changes did not refresh an already-open New Animation tab; the tab showed "no active draft". | `SharedDraftController.attach()` subscribed to the bridge only if the bridge existed at construction; rig loading is asynchronous. | CLOSED — `FrontendAuthoringBridge.notify_change()` now emits a UI-only `m2m-authoring-document-changed` CustomEvent; the controller listens to it independently of bridge timing. No authorization meaning, no payload. |
+| 3 | No MCP way to switch the visible page, so an agent could not make the GUI observable without hijacking the mouse. | No authoring operation or tool existed for navigation. | CLOSED — new `application.set_page` authoring operation and `application_set_page({page})` MCP tool. `new-animation` navigates to `/newAnimation/index.html`, `explore` to `/index.html`. Navigation is deferred 150 ms so the IPC reply is sent first. |
+| 4 | First implementation of #3 timed out with `SESSION_CONFLICT` / no reply. | `authoring_call` reused a constant request ID and sequence; the host guard also treated the new op as session-only. | CLOSED — `authoring_call` now uses session-scoped unique request IDs and an increasing sequence; `ApplicationSetPage` is a session-free (read-like) operation in the host guard. |
+| 5 | Stale integration `dist` made WebKit spin at ~37% CPU with no socket or `M2M_HOST` log — the app looked broken. | The worktree still contained the reverted chunk-split bundle. | CLOSED — rebuilt `dist` from the final frontend HEAD and re-embedded it (Tauri needs a rebuilt bundle copied into `mesh2motion-app/dist`, not just a Vite build). |
+| 6 | Authored clip tiles could show "No preview". | Preview frames were generated only during startup restore, after tiles had rendered. | CLOSED earlier — commit-time generation/registration/persistence (`98fcf60`) plus catalog refresh (`657e418`). |
+| 7 | `RIG_UNAVAILABLE` / stale skeleton and non-deterministic captures. | Observation service held an early fallback skeleton; transient null rig snapshots disposed the service; unauthored bones kept the playing animation. | CLOSED earlier — live-skeleton re-read per capture, debounced teardown, dynamic adapter dispatch, bind-pose reset (`98fcf60`). Repeat captures are byte-identical. |
+
+## Verification of the GUI-observation path
+
+- Real MCP `tools/list` exposes the new `application_set_page` tool.
+- `application_set_page({page:"new-animation"})` returns `{"data":{"page":"new-animation"},"ok":true}`.
+- `application_get_status` afterwards reports the New Animation page's published value `unknown`
+  (the frozen Rust enum accepts `unknown` for that page), confirming navigation.
+- No X11 pointer or keyboard injection is used for the authoring workflow; Wayland remains the normal
+  session. `xdotool` was used only diagnostically to confirm why native Wayland cannot be automated
+  that way, never as the solution.
+
+## Remaining limits
+
+- Bacon watcher does not terminate on its own; Cargo `check` inside it succeeds.
+- BugStalker 0.4.9 is available; only availability/smoke evidence, no active fault to debug.
+- Final aesthetic sign-off belongs to the user in the New Animation tab. The agent must not commit a
+  clip until the user confirms the pose in that tab.

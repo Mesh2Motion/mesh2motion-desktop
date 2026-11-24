@@ -76,6 +76,7 @@ impl AuthoringGuard {
                 | AuthoringOperation::DraftValidate
                 | AuthoringOperation::SessionStatus
                 | AuthoringOperation::SessionCancel
+                | AuthoringOperation::ApplicationSetPage
         );
         if state.active_session.is_none() && !starts_session && !read_without_session {
             return Err(AuthoringErrorCode::SessionConflict);

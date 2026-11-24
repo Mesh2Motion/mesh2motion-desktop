@@ -29,6 +29,7 @@ pub struct Mesh2MotionMcp {
     observation_captures: Arc<Mutex<HashMap<String, CachedObservation>>>,
     expired_observation_ids: Arc<Mutex<std::collections::HashSet<String>>>,
     next_observation_sequence: Arc<std::sync::atomic::AtomicU64>,
+    next_authoring_sequence: Arc<std::sync::atomic::AtomicU64>,
 }
 
 #[derive(Clone)]
@@ -89,6 +90,7 @@ impl Mesh2MotionMcp {
             observation_captures: Arc::new(Mutex::new(HashMap::new())),
             expired_observation_ids: Arc::new(Mutex::new(std::collections::HashSet::new())),
             next_observation_sequence: Arc::new(std::sync::atomic::AtomicU64::new(0)),
+            next_authoring_sequence: Arc::new(std::sync::atomic::AtomicU64::new(0)),
         }
     }
 
@@ -161,11 +163,15 @@ impl Mesh2MotionMcp {
         operation: AuthoringOperation,
         payload: serde_json::Value,
     ) -> Json<ToolEnvelope<serde_json::Value>> {
+        let sequence = self
+            .next_authoring_sequence
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            .saturating_add(1);
         let request = AuthoringRequest {
             protocol: AUTHORING_BRIDGE_PROTOCOL.to_owned(),
-            request_id: "mcp-request".to_owned(),
+            request_id: format!("mcp-{}-{sequence}", self.authoring_session_id),
             session_id: self.authoring_session_id.clone(),
-            sequence: 1,
+            sequence,
             deadline_ms: 30_000,
             operation,
             payload,
@@ -996,6 +1002,12 @@ pub struct UndoCommitArgs {
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub struct PageArgs {
+    pub page: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ImportDraftArgs {
     pub document: AnimationDocument,
 }
@@ -1712,6 +1724,29 @@ impl Mesh2MotionMcp {
             let _ = self.drafts.remove(&self.authoring_session_id);
         }
         response
+    }
+
+    #[tool(
+        name = "application_set_page",
+        description = "Switch the visible native app page so the user can observe and correct an MCP draft: page='new-animation' opens the New Animation editor, page='explore' returns to the library. Use this before authoring so the user sees every change before it is saved. No filesystem path or script is accepted."
+    )]
+    pub async fn application_set_page(
+        &self,
+        Parameters(args): Parameters<PageArgs>,
+    ) -> Json<ToolEnvelope<serde_json::Value>> {
+        if !matches!(args.page.as_str(), "new-animation" | "explore") {
+            return Json(ToolEnvelope::failure(
+                "BAD_REQUEST",
+                "page must be 'new-animation' or 'explore'",
+                false,
+                None,
+            ));
+        }
+        self.authoring_call(
+            AuthoringOperation::ApplicationSetPage,
+            serde_json::json!({"page": args.page}),
+        )
+        .await
     }
 
     #[tool(

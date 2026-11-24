@@ -39,6 +39,8 @@ pub enum AuthoringOperation {
     SessionStatus,
     #[serde(rename = "session.cancel")]
     SessionCancel,
+    #[serde(rename = "application.set_page")]
+    ApplicationSetPage,
     #[serde(other)]
     Unknown,
 }
