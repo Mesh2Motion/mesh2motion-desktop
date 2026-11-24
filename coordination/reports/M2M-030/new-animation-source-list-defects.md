@@ -29,13 +29,12 @@ Branch state at report: frontend `9b5a659`, desktop integration `20acb743`.
 
 ## Resolution (after documentation)
 
-- Root cause of issues 2 and 3: `NewAnimationWorkspace` owned a **second, private `AnimationLibrary`**
-  reset from the rig manifest, while authored clips live in `StepAnimationsListing`'s authoritative
-  library (the one MCP `animations_list` reports). The source list also hard-capped rendering at
-  `entries.slice(0, 100)`. Fixed by exposing `library_entries()` / `load_library_entry(id)` on
-  `StepAnimationsListing` and using that library for the source list (no 100-entry cap).
-- Issue 1: with the authoritative library, `load_library_entry()` returns the loaded entry with its
-  `AnimationClip`, so `import_clip_as_document()` receives real tracks and installs them as the active
-  draft via `create_from_existing()`.
+- First attempted fix (reverted): using `StepAnimationsListing.library_entries()`. It made the list
+  empty because `StepAnimationsListing.begin()` calls `reset_step_data()`, which **clears** the library
+  and only repopulates it through the AnimationsListing loader callback — never active on this page.
+- Final fix: keep the rig-manifest `AnimationLibrary` for default clips, **add authored documents from
+  `load_authored_documents()`** to the source list, and remove the `slice(0, 100)` cap. Selecting an
+  authored entry now calls `create_from_existing(stored.document, name)` directly, so its real tracks
+  become an editable draft. Selecting a manifest clip uses `animation_library.load()` as before.
 - Frontend gates: 71 files / 481 tests, tsc, eslint, Vite all pass. All mandatory tools were re-run
   on the integration pair (see handoff).
