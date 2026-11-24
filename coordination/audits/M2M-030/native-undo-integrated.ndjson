@@ -1,0 +1,4 @@
+{"request":{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"m2m030b-pose-observation","version":"1"}}}}
+{"response":{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-03-26","capabilities":{"tools":{}},"serverInfo":{"name":"rmcp","version":"3.11.0"}}}}
+{"request":{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"animation_cancel_session","arguments":{}}}}
+{"response":{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"{\"error\":{\"code\":\"SESSION_CONFLICT\",\"message\":\"dispatcher disposed\",\"retryable\":false},\"ok\":false}"}],"structuredContent":{"error":{"code":"SESSION_CONFLICT","message":"dispatcher disposed","retryable":false},"ok":false},"isError":false}}}

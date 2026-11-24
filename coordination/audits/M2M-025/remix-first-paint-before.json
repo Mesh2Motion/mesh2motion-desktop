@@ -1,0 +1,14 @@
+[
+  {
+    "label": "immediate_after_paint",
+    "data": "{\"readyState\":\"interactive\",\"theme\":null,\"bgAlternate\":\"#426074\",\"bgPrimary\":\"#2b4353\",\"body\":{\"bg\":\"rgb(43, 67, 83)\",\"bgImage\":\"none\",\"display\":\"inline-block\",\"position\":\"static\",\"w\":114,\"h\":56,\"scrollH\":56,\"scrollTop\":0},\"viewport\":{\"bg\":\"rgb(66, 96, 116)\",\"bgImage\":\"none\",\"display\":\"block\",\"position\":\"relative\",\"w\":405,\"h\":161,\"scrollH\":39325,\"scrollTop\":0},\"content\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"bgImage\":\"none\",\"display\":\"block\",\"position\":\"relative\",\"w\":383,\"h\":39304,\"scrollH\":39304,\"scrollTop\":0}}"
+  },
+  {
+    "label": "first_paint",
+    "data": "{\"readyState\":\"complete\",\"theme\":null,\"bgAlternate\":\"#426074\",\"bgPrimary\":\"#2b4353\",\"body\":{\"bg\":\"rgb(43, 67, 83)\",\"bgImage\":\"none\",\"display\":\"inline-block\",\"position\":\"static\",\"w\":114,\"h\":57,\"scrollH\":57,\"scrollTop\":0},\"viewport\":{\"bg\":\"rgb(66, 96, 116)\",\"bgImage\":\"none\",\"display\":\"block\",\"position\":\"relative\",\"w\":405,\"h\":161,\"scrollH\":13117,\"scrollTop\":0},\"content\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"bgImage\":\"none\",\"display\":\"block\",\"position\":\"relative\",\"w\":383,\"h\":13096,\"scrollH\":13096,\"scrollTop\":0}}"
+  },
+  {
+    "label": "after_scroll",
+    "data": "{\"readyState\":\"complete\",\"theme\":null,\"bgAlternate\":\"#426074\",\"bgPrimary\":\"#2b4353\",\"body\":{\"bg\":\"rgb(43, 67, 83)\",\"bgImage\":\"none\",\"display\":\"inline-block\",\"position\":\"static\",\"w\":114,\"h\":57,\"scrollH\":57,\"scrollTop\":0},\"viewport\":{\"bg\":\"rgb(66, 96, 116)\",\"bgImage\":\"none\",\"display\":\"block\",\"position\":\"relative\",\"w\":405,\"h\":161,\"scrollH\":13117,\"scrollTop\":400},\"content\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"bgImage\":\"none\",\"display\":\"block\",\"position\":\"relative\",\"w\":383,\"h\":13096,\"scrollH\":13096,\"scrollTop\":0}}"
+  }
+]
