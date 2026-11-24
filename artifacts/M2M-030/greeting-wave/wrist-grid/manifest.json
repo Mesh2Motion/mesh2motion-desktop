@@ -1,0 +1,92 @@
+[
+  {
+    "label": "xm60",
+    "axis": "x",
+    "deg": -60,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf2569-07219a70-front.png"
+  },
+  {
+    "label": "xm30",
+    "axis": "x",
+    "deg": -30,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf2863-4a05d944-front.png"
+  },
+  {
+    "label": "xp0",
+    "axis": "x",
+    "deg": 0,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf2a75-88b631ca-front.png"
+  },
+  {
+    "label": "xp30",
+    "axis": "x",
+    "deg": 30,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf2c86-4737da46-front.png"
+  },
+  {
+    "label": "xp60",
+    "axis": "x",
+    "deg": 60,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf2e93-3d182c00-front.png"
+  },
+  {
+    "label": "ym60",
+    "axis": "y",
+    "deg": -60,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf3097-4245027b-front.png"
+  },
+  {
+    "label": "ym30",
+    "axis": "y",
+    "deg": -30,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf32a9-34eb90ae-front.png"
+  },
+  {
+    "label": "yp0",
+    "axis": "y",
+    "deg": 0,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf34a9-d97e54ba-front.png"
+  },
+  {
+    "label": "yp30",
+    "axis": "y",
+    "deg": 30,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf36b7-8324d08b-front.png"
+  },
+  {
+    "label": "yp60",
+    "axis": "y",
+    "deg": 60,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf38de-d88390cc-front.png"
+  },
+  {
+    "label": "zm60",
+    "axis": "z",
+    "deg": -60,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf3ae7-242395e3-front.png"
+  },
+  {
+    "label": "zm30",
+    "axis": "z",
+    "deg": -30,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf3ceb-d9bcf23d-front.png"
+  },
+  {
+    "label": "zp0",
+    "axis": "z",
+    "deg": 0,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf3ef5-56df61c5-front.png"
+  },
+  {
+    "label": "zp30",
+    "axis": "z",
+    "deg": 30,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf410b-30d83e85-front.png"
+  },
+  {
+    "label": "zp60",
+    "axis": "z",
+    "deg": 60,
+    "path": "/tmp/opencode/wrist-grid/capture-1a20adf432a-4ec107c3-front.png"
+  }
+]
