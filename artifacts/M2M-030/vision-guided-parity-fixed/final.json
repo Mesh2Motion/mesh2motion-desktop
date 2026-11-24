@@ -1,0 +1,196 @@
+{
+  "draft_id": "mcp-2781610-1795476373620529771",
+  "commit_revision": 14,
+  "v1": [
+    {
+      "tag": "v1",
+      "time": 0.25,
+      "capture_id": "capture-1a20abb415e-e9aeb9f1",
+      "pose_digest": "5d4cdd5a7d23f4a6883d671f673b001bf0d30bee52cef055b83955277ac7695d",
+      "rig_fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+      "revision": 7,
+      "images": [
+        {
+          "view": "front",
+          "bytes": 30174,
+          "sha256": "3ba2351ccf66d7025d8f2303866594bdb257b493a4ed92e9fbc3bab7af84a13d",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb415e-e9aeb9f1-front.png"
+        },
+        {
+          "view": "right",
+          "bytes": 25770,
+          "sha256": "b67d98f3c0103d5f1056923adcd2adde56bb7d9592c2aa42bc3d986545c4bd83",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb415e-e9aeb9f1-right.png"
+        },
+        {
+          "view": "top",
+          "bytes": 18368,
+          "sha256": "f707b3819e0a4c1d05b4eeed5cc044c0c664846ea708e806c1d4d0e2c9f16c0f",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb415e-e9aeb9f1-top.png"
+        }
+      ]
+    },
+    {
+      "tag": "v1",
+      "time": 0.75,
+      "capture_id": "capture-1a20abb49c0-3a4e7e5e",
+      "pose_digest": "7a659a3151735629c08542831ed3347d10eae5d1c589063cb83be32959c28167",
+      "rig_fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+      "revision": 7,
+      "images": [
+        {
+          "view": "front",
+          "bytes": 29618,
+          "sha256": "0602861a7b81a426f7f8ef21e457ca838da22a8788b7085c5706799f9672f8ef",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb49c0-3a4e7e5e-front.png"
+        },
+        {
+          "view": "right",
+          "bytes": 25375,
+          "sha256": "178403d5cbc4f9ebfeda5258d2775c53a68a6e4f9e1cb4d12692490e7349b7d1",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb49c0-3a4e7e5e-right.png"
+        },
+        {
+          "view": "top",
+          "bytes": 18363,
+          "sha256": "74bfd1586abd3ee91e6713d98801867c48550e9de805a2f9b9e838f9ac6b81c4",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb49c0-3a4e7e5e-top.png"
+        }
+      ]
+    },
+    {
+      "tag": "v1",
+      "time": 1.25,
+      "capture_id": "capture-1a20abb5226-8d0594b9",
+      "pose_digest": "5d4cdd5a7d23f4a6883d671f673b001bf0d30bee52cef055b83955277ac7695d",
+      "rig_fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+      "revision": 7,
+      "images": [
+        {
+          "view": "front",
+          "bytes": 30174,
+          "sha256": "3ba2351ccf66d7025d8f2303866594bdb257b493a4ed92e9fbc3bab7af84a13d",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb5226-8d0594b9-front.png"
+        },
+        {
+          "view": "right",
+          "bytes": 25770,
+          "sha256": "b67d98f3c0103d5f1056923adcd2adde56bb7d9592c2aa42bc3d986545c4bd83",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb5226-8d0594b9-right.png"
+        },
+        {
+          "view": "top",
+          "bytes": 18368,
+          "sha256": "f707b3819e0a4c1d05b4eeed5cc044c0c664846ea708e806c1d4d0e2c9f16c0f",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abb5226-8d0594b9-top.png"
+        }
+      ]
+    }
+  ],
+  "v2": [
+    {
+      "tag": "v2",
+      "time": 0.25,
+      "capture_id": "capture-1a20abbe705-ebace7a1",
+      "pose_digest": "1f516e0e7109a98d531309980379dee77a5e356571270f99e2b4f39501967e3c",
+      "rig_fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+      "revision": 13,
+      "images": [
+        {
+          "view": "front",
+          "bytes": 29820,
+          "sha256": "593889bb749995274ae05f239f6b55cdb2991dc7ca8f67f16a9cbc2d1b3e1a1d",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abbe705-ebace7a1-front.png"
+        },
+        {
+          "view": "right",
+          "bytes": 26625,
+          "sha256": "5907465eaa528bf1eeb54ad01b787d64ce79e382135360ba8b040f48a222ad59",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abbe705-ebace7a1-right.png"
+        },
+        {
+          "view": "top",
+          "bytes": 17042,
+          "sha256": "eab41b4c41b0cba49af151dd11401d34b6e472eb90db225d0c36ad15ae196648",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abbe705-ebace7a1-top.png"
+        }
+      ]
+    },
+    {
+      "tag": "v2",
+      "time": 0.75,
+      "capture_id": "capture-1a20abbec61-c7c39f0a",
+      "pose_digest": "fea020a068320ce0ca923230b27b62b4c87072f61850619b5a5affdd4567c88a",
+      "rig_fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+      "revision": 13,
+      "images": [
+        {
+          "view": "front",
+          "bytes": 29037,
+          "sha256": "39f9921ec88681e7bbab07c0d9eb1c783a2540c30078e212b762222a92e92a2d",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abbec61-c7c39f0a-front.png"
+        },
+        {
+          "view": "right",
+          "bytes": 25594,
+          "sha256": "5393648d4ee6d714360677d6d9a26e83ff1c321cd43aafd4e37ed987beecc430",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abbec61-c7c39f0a-right.png"
+        },
+        {
+          "view": "top",
+          "bytes": 16853,
+          "sha256": "2b4cd886e29822acfe5565591e4e2d96b05d17a5cc14afbbfb8e94e0fdf08eba",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abbec61-c7c39f0a-top.png"
+        }
+      ]
+    },
+    {
+      "tag": "v2",
+      "time": 1.25,
+      "capture_id": "capture-1a20abbf18b-acc6e4a8",
+      "pose_digest": "1f516e0e7109a98d531309980379dee77a5e356571270f99e2b4f39501967e3c",
+      "rig_fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+      "revision": 13,
+      "images": [
+        {
+          "view": "front",
+          "bytes": 29820,
+          "sha256": "593889bb749995274ae05f239f6b55cdb2991dc7ca8f67f16a9cbc2d1b3e1a1d",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abbf18b-acc6e4a8-front.png"
+        },
+        {
+          "view": "right",
+          "bytes": 26625,
+          "sha256": "5907465eaa528bf1eeb54ad01b787d64ce79e382135360ba8b040f48a222ad59",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abbf18b-acc6e4a8-right.png"
+        },
+        {
+          "view": "top",
+          "bytes": 17042,
+          "sha256": "eab41b4c41b0cba49af151dd11401d34b6e472eb90db225d0c36ad15ae196648",
+          "path": "/tmp/opencode/m2m030b-wave-final/images/capture-1a20abbf18b-acc6e4a8-top.png"
+        }
+      ]
+    }
+  ],
+  "library_entry": {
+    "durationS": 2.0,
+    "index": 0,
+    "name": "Agent_Wave_01_vision",
+    "origin": "loaded",
+    "rig": "human",
+    "sourceType": "custom-import",
+    "tags": [
+      "authored-animation-document",
+      "rig:human",
+      "revision:14"
+    ],
+    "trackCount": 6
+  },
+  "undo": {
+    "entry_id": "custom-import-6",
+    "revision": 15
+  },
+  "reimport_tracks": 6,
+  "reimport_match": true
+}

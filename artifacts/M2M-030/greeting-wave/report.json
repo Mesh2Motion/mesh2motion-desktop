@@ -1,0 +1,108 @@
+{
+  "channels": {
+    "upperarm_l": {
+      "axis": "z",
+      "values": [
+        95.0,
+        95.0,
+        95.0,
+        95.0,
+        95.0,
+        95.0,
+        95.0,
+        95.0,
+        95.0
+      ]
+    },
+    "lowerarm_l": {
+      "axis": "z",
+      "values": [
+        60.0,
+        60.0,
+        60.0,
+        60.0,
+        60.0,
+        60.0,
+        60.0,
+        60.0,
+        60.0
+      ]
+    },
+    "upperarm_r": {
+      "axis": "z",
+      "values": [
+        82.0,
+        82.0,
+        82.0,
+        82.0,
+        82.0,
+        82.0,
+        82.0,
+        82.0,
+        82.0
+      ]
+    },
+    "lowerarm_r": {
+      "axis": "z",
+      "values": [
+        8.0,
+        8.0,
+        8.0,
+        8.0,
+        8.0,
+        8.0,
+        8.0,
+        8.0,
+        8.0
+      ]
+    },
+    "hand_l": {
+      "axis": "y",
+      "values": [
+        30.0,
+        60.0,
+        30.0,
+        60.0,
+        30.0,
+        60.0,
+        30.0,
+        60.0,
+        30.0
+      ]
+    }
+  },
+  "validation": {
+    "errors": [],
+    "state": "valid"
+  },
+  "images": [
+    {
+      "time": 0.0,
+      "sha256": "57c5f15bc602de388da37d934673bd2513f67e831a6352cc6fe4759bbf177ee6",
+      "path": "/tmp/opencode/greeting-wave/capture-1a20ae0beb6-d787b4be-front.png"
+    },
+    {
+      "time": 0.25,
+      "sha256": "e5ff7486a39b571b4106b28690f785b98133edb5bf25e28a8ff95dd1dc1aff51",
+      "path": "/tmp/opencode/greeting-wave/capture-1a20ae0c0a4-056a77b1-front.png"
+    }
+  ],
+  "commit": {
+    "entry_id": "custom-import-5",
+    "revision": 7
+  },
+  "library_entry": {
+    "durationS": 2.0,
+    "index": 2,
+    "name": "Greeting Wave",
+    "origin": "loaded",
+    "rig": "human",
+    "sourceType": "custom-import",
+    "tags": [
+      "authored-animation-document",
+      "rig:human",
+      "revision:7"
+    ],
+    "trackCount": 66
+  }
+}

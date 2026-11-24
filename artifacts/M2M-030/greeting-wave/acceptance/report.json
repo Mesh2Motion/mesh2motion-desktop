@@ -1,0 +1,88 @@
+{
+  "fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+  "observations": [
+    {
+      "time": 0.0,
+      "digest": "dd9b6988c2a0236825c85fdf409b423d574124745745b1ea168064c616c6ce96",
+      "capture_id": "capture-1a20af5f00e-b08911eb",
+      "fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+      "revision": 6,
+      "images": [
+        {
+          "view": "front",
+          "sha256": "f95ed8a3ffe5bb8d1daa0eb22d4a1f854fb44ba49469e6a934c70a15b2742a32",
+          "path": "/tmp/opencode/greeting-wave-acceptance/capture-1a20af5f00e-b08911eb-front.png"
+        },
+        {
+          "view": "right",
+          "sha256": "a392a0fce330fc17b7fd6986dcef3eebb977a3779e9d28a2c5e7462f35458da4",
+          "path": "/tmp/opencode/greeting-wave-acceptance/capture-1a20af5f00e-b08911eb-right.png"
+        },
+        {
+          "view": "top",
+          "sha256": "0694bf55c82cf0ad8722c87ce5637833a314daa3d91fea20b76779aa0548e789",
+          "path": "/tmp/opencode/greeting-wave-acceptance/capture-1a20af5f00e-b08911eb-top.png"
+        }
+      ]
+    },
+    {
+      "time": 0.25,
+      "digest": "27aa54323d68cb2d679893dc00147270135e932e9617f2095a4b8f8a8225b8cb",
+      "capture_id": "capture-1a20af5f5d2-8a19a581",
+      "fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+      "revision": 6,
+      "images": [
+        {
+          "view": "front",
+          "sha256": "388edda9d5fbf0f588dd27557e34de37f7d74a7e479a04353b74daa081dd30eb",
+          "path": "/tmp/opencode/greeting-wave-acceptance/capture-1a20af5f5d2-8a19a581-front.png"
+        },
+        {
+          "view": "right",
+          "sha256": "416331069cc85568cecf1525745cf0ca09235ec3a8146829d30224c483a68150",
+          "path": "/tmp/opencode/greeting-wave-acceptance/capture-1a20af5f5d2-8a19a581-right.png"
+        },
+        {
+          "view": "top",
+          "sha256": "6418b14c2e2435a1a4b29dba7bca090b6efe7e8f61381d5651b9b37923846baa",
+          "path": "/tmp/opencode/greeting-wave-acceptance/capture-1a20af5f5d2-8a19a581-top.png"
+        }
+      ]
+    },
+    {
+      "time": 0.5,
+      "digest": "dd9b6988c2a0236825c85fdf409b423d574124745745b1ea168064c616c6ce96",
+      "capture_id": "capture-1a20af5fb68-004468c9",
+      "fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+      "revision": 6,
+      "images": [
+        {
+          "view": "front",
+          "sha256": "f95ed8a3ffe5bb8d1daa0eb22d4a1f854fb44ba49469e6a934c70a15b2742a32",
+          "path": "/tmp/opencode/greeting-wave-acceptance/capture-1a20af5fb68-004468c9-front.png"
+        },
+        {
+          "view": "right",
+          "sha256": "a392a0fce330fc17b7fd6986dcef3eebb977a3779e9d28a2c5e7462f35458da4",
+          "path": "/tmp/opencode/greeting-wave-acceptance/capture-1a20af5fb68-004468c9-right.png"
+        },
+        {
+          "view": "top",
+          "sha256": "0694bf55c82cf0ad8722c87ce5637833a314daa3d91fea20b76779aa0548e789",
+          "path": "/tmp/opencode/greeting-wave-acceptance/capture-1a20af5fb68-004468c9-top.png"
+        }
+      ]
+    }
+  ],
+  "roundtrip": {
+    "rev": 6,
+    "tracks_match": true,
+    "tracks": 5,
+    "keys": 45,
+    "duration": 2,
+    "rig": {
+      "fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+      "identifier": "human"
+    }
+  }
+}

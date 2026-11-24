@@ -1,0 +1,106 @@
+pkgbase=mesh2motion-git
+pkgname=('mesh2motion-git' 'mesh2motion-mcp-git')
+pkgver=0.1.10.r83.m2m032
+pkgrel=2
+pkgdesc='Native Mesh2Motion desktop application for Arch Linux'
+arch=('x86_64')
+url='https://github.com/Mesh2Motion/mesh2motion-desktop'
+license=('MIT' 'CC0-1.0')
+makedepends=('git' 'gtk3' 'webkit2gtk-4.1' 'nodejs' 'npm' 'openssl' 'rust>=1.88' 'pkgconf')
+
+_desktop_commit='854be4018aa91894e82aa8fa7f37c14cd64dba90'
+_frontend_commit='490db8939d3cb99b956dbce267d235976cabf3c5'
+_desktop_repo="${M2M_DESKTOP_GIT_URL:-https://github.com/Mesh2Motion/mesh2motion-desktop.git}"
+_frontend_repo="${M2M_FRONTEND_GIT_URL:-https://github.com/Mesh2Motion/mesh2motion-app.git}"
+
+source=(
+  "mesh2motion::git+${_desktop_repo}#commit=${_desktop_commit}"
+  "frontend::git+${_frontend_repo}#commit=${_frontend_commit}"
+  'mesh2motion.desktop'
+  'mesh2motion-launcher'
+  'MCP-CLIENT.md'
+)
+sha256sums=('SKIP' 'SKIP'
+            'e125a2736b0fef332bdc7e86ecee10f64d82d10071a65fe593a3bfe1885033be'
+            '9e0ac374a936bd27e912ab53f58acf17ed34c03131abd4fd5c8511e1a439e06f'
+            '056c307fe5073e78422b87e57af4c3c6899088f67626727b0cdd136b3e8941e4')
+
+prepare() {
+  local tree="${srcdir}/mesh2motion"
+  [[ "$(git -C "$tree" rev-parse HEAD)" == "${_desktop_commit}" ]]
+  [[ "$(git -C "${srcdir}/frontend" rev-parse HEAD)" == "${_frontend_commit}" ]]
+
+  # The Git source clone has an empty gitlink directory; copy the separately
+  # pinned frontend into it without initializing or updating the submodule.
+  mkdir -p "${tree}/mesh2motion-app"
+  cp -a "${srcdir}/frontend/." "${tree}/mesh2motion-app/"
+}
+
+build() {
+  local tree="${srcdir}/mesh2motion"
+  local target="${srcdir}/cargo-target"
+
+  # Keep makepkg's temporary $srcdir out of compiler/debug path metadata.
+  # Cargo's encoded flag form preserves spaces in the user's home path.
+  export CARGO_ENCODED_RUSTFLAGS="--remap-path-prefix=${srcdir}=/usr/src/mesh2motion"$'\x1f'"--remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}=/usr/src/cargo-home"
+
+  cd "${tree}/mesh2motion-app"
+  npm ci --ignore-scripts --no-audit --no-fund
+  npm test -- --run
+  npm run build
+
+  CARGO_TARGET_DIR="$target" cargo build --locked --release \
+    --features mcp-host,custom-protocol \
+    --manifest-path "${tree}/src-tauri/Cargo.toml"
+  CARGO_TARGET_DIR="$target" cargo build --locked --release \
+    --manifest-path "${tree}/src-tauri/mcp-server/Cargo.toml"
+}
+
+package_mesh2motion-git() {
+  depends=(
+    'gtk3'
+    'webkit2gtk-4.1'
+    'gdk-pixbuf2'
+    'cairo'
+    'glib2'
+    'dbus'
+    'libsoup3'
+    'gcc-libs'
+    'hicolor-icon-theme'
+    'gst-plugins-good'
+    'gst-libav'
+  )
+  provides=('mesh2motion')
+  conflicts=('mesh2motion')
+
+  local tree="${srcdir}/mesh2motion"
+  install -Dm755 "${srcdir}/mesh2motion-launcher" \
+    "${pkgdir}/usr/bin/mesh2motion"
+  install -Dm755 "${srcdir}/cargo-target/release/mesh2motion" \
+    "${pkgdir}/usr/lib/mesh2motion/mesh2motion"
+  # Tauri resolves BaseDirectory::Resource to /usr/lib/<productName> on Linux.
+  install -d "${pkgdir}/usr/lib/Mesh2Motion/animpreviews"
+  cp -a "${tree}/mesh2motion-app/dist/animpreviews/." \
+    "${pkgdir}/usr/lib/Mesh2Motion/animpreviews/"
+  install -Dm644 "${srcdir}/mesh2motion.desktop" \
+    "${pkgdir}/usr/share/applications/mesh2motion.desktop"
+  install -Dm644 "${tree}/src-tauri/icons/icon.png" \
+    "${pkgdir}/usr/share/icons/hicolor/512x512/apps/mesh2motion.png"
+  install -Dm644 "${tree}/mesh2motion-app/LICENSE-MIT.MD" \
+    "${pkgdir}/usr/share/licenses/mesh2motion-git/LICENSE-MIT.MD"
+  install -Dm644 "${tree}/mesh2motion-app/LICENSE-CC0.MD" \
+    "${pkgdir}/usr/share/licenses/mesh2motion-git/LICENSE-CC0.MD"
+}
+
+package_mesh2motion-mcp-git() {
+  pkgdesc='Optional MCP stdio sidecar with authoring and pose observation for Mesh2Motion'
+  depends=('glibc')
+  optdepends=('mesh2motion-git: desktop application queried by the sidecar')
+
+  install -Dm755 "${srcdir}/cargo-target/release/mesh2motion-mcp" \
+    "${pkgdir}/usr/bin/mesh2motion-mcp"
+  install -Dm644 "${srcdir}/MCP-CLIENT.md" \
+    "${pkgdir}/usr/share/doc/mesh2motion-mcp-git/MCP-CLIENT.md"
+  install -Dm644 "${srcdir}/mesh2motion/mesh2motion-app/LICENSE-MIT.MD" \
+    "${pkgdir}/usr/share/licenses/mesh2motion-mcp-git/LICENSE-MIT.MD"
+}

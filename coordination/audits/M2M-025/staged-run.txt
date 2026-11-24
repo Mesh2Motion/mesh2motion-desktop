@@ -1,0 +1,17 @@
+M2M-025D/NATIVE-005 staged native run for visual inspection
+
+Latest run: 2026-11-23 (second residue pass)
+Frontend integration branch: m2m-025-integration @ 5f8134081883069abc35f538da212738bb40caa5
+Desktop integration branch: m2m-025-integration @ 6b247d2e0d85b2bc57aa3d17d5a1c0806113362c
+Staging worktree: worktrees/m2m025d-stage (detached at desktop 68616f3)
+Frontend dist copied from: worktrees/m2m025-integration/mesh2motion-app/dist
+Binary: worktrees/m2m025d-stage/src-tauri/target/debug/mesh2motion
+Main PID: 1627489
+WebKitWebProcess child: 1627777
+Log: /tmp/opencode/m2m025d/staged-app3.log
+Build log: /tmp/opencode/m2m025d/cargo-build4.log (EXIT=0)
+
+Previous PIDs 1597580 and 1612533 were stopped. No package was installed;
+the installed application remains untouched.
+
+Stop with: kill 1627489

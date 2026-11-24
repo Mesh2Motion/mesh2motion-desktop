@@ -9,6 +9,12 @@
   },
   "app": {
     "withGlobalTauri": true,
+    "security": {
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$RESOURCE/animpreviews/**/*"]
+      }
+    },
     "windows": [
       {
         "title": "Mesh2Motion",
@@ -18,8 +24,11 @@
       }
     ]
   },
-    "bundle": {
+  "bundle": {
     "active": true,
+    "resources": {
+      "../mesh2motion-app/static/animpreviews/": "animpreviews/"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

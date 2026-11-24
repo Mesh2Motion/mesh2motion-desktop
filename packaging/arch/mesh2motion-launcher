@@ -1,0 +1,6 @@
+#!/usr/bin/bash
+set -euo pipefail
+if [[ -z "${M2M_MCP_SIDECAR_PATH:-}" && -x /usr/bin/mesh2motion-mcp ]]; then
+  export M2M_MCP_SIDECAR_PATH=/usr/bin/mesh2motion-mcp
+fi
+exec /usr/lib/mesh2motion/mesh2motion "$@"

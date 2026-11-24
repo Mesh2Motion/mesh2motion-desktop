@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Mesh2Motion
+Comment=Create and animate 3D characters
+Exec=mesh2motion
+Icon=mesh2motion
+Terminal=false
+Categories=Graphics;3DGraphics;
+StartupNotify=true

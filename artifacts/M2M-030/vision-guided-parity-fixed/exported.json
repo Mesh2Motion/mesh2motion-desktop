@@ -1,0 +1,992 @@
+{
+  "bones": [
+    {
+      "display_name": "root",
+      "id": "human:bone:000",
+      "index": 0,
+      "parent_id": null
+    },
+    {
+      "display_name": "pelvis",
+      "id": "human:bone:001",
+      "index": 1,
+      "parent_id": "human:bone:000"
+    },
+    {
+      "display_name": "spine_01",
+      "id": "human:bone:002",
+      "index": 2,
+      "parent_id": "human:bone:001"
+    },
+    {
+      "display_name": "spine_02",
+      "id": "human:bone:003",
+      "index": 3,
+      "parent_id": "human:bone:002"
+    },
+    {
+      "display_name": "spine_03",
+      "id": "human:bone:004",
+      "index": 4,
+      "parent_id": "human:bone:003"
+    },
+    {
+      "display_name": "clavicle_l",
+      "id": "human:bone:005",
+      "index": 5,
+      "parent_id": "human:bone:004"
+    },
+    {
+      "display_name": "upperarm_l",
+      "id": "human:bone:006",
+      "index": 6,
+      "parent_id": "human:bone:005"
+    },
+    {
+      "display_name": "lowerarm_l",
+      "id": "human:bone:007",
+      "index": 7,
+      "parent_id": "human:bone:006"
+    },
+    {
+      "display_name": "hand_l",
+      "id": "human:bone:008",
+      "index": 8,
+      "parent_id": "human:bone:007"
+    },
+    {
+      "display_name": "index_01_l",
+      "id": "human:bone:009",
+      "index": 9,
+      "parent_id": "human:bone:008"
+    },
+    {
+      "display_name": "index_02_l",
+      "id": "human:bone:010",
+      "index": 10,
+      "parent_id": "human:bone:009"
+    },
+    {
+      "display_name": "index_03_l",
+      "id": "human:bone:011",
+      "index": 11,
+      "parent_id": "human:bone:010"
+    },
+    {
+      "display_name": "index_04_leaf_l",
+      "id": "human:bone:012",
+      "index": 12,
+      "parent_id": "human:bone:011"
+    },
+    {
+      "display_name": "middle_01_l",
+      "id": "human:bone:013",
+      "index": 13,
+      "parent_id": "human:bone:008"
+    },
+    {
+      "display_name": "middle_02_l",
+      "id": "human:bone:014",
+      "index": 14,
+      "parent_id": "human:bone:013"
+    },
+    {
+      "display_name": "middle_03_l",
+      "id": "human:bone:015",
+      "index": 15,
+      "parent_id": "human:bone:014"
+    },
+    {
+      "display_name": "middle_04_leaf_l",
+      "id": "human:bone:016",
+      "index": 16,
+      "parent_id": "human:bone:015"
+    },
+    {
+      "display_name": "pinky_01_l",
+      "id": "human:bone:017",
+      "index": 17,
+      "parent_id": "human:bone:008"
+    },
+    {
+      "display_name": "pinky_02_l",
+      "id": "human:bone:018",
+      "index": 18,
+      "parent_id": "human:bone:017"
+    },
+    {
+      "display_name": "pinky_03_l",
+      "id": "human:bone:019",
+      "index": 19,
+      "parent_id": "human:bone:018"
+    },
+    {
+      "display_name": "pinky_04_leaf_l",
+      "id": "human:bone:020",
+      "index": 20,
+      "parent_id": "human:bone:019"
+    },
+    {
+      "display_name": "ring_01_l",
+      "id": "human:bone:021",
+      "index": 21,
+      "parent_id": "human:bone:008"
+    },
+    {
+      "display_name": "ring_02_l",
+      "id": "human:bone:022",
+      "index": 22,
+      "parent_id": "human:bone:021"
+    },
+    {
+      "display_name": "ring_03_l",
+      "id": "human:bone:023",
+      "index": 23,
+      "parent_id": "human:bone:022"
+    },
+    {
+      "display_name": "ring_04_leaf_l",
+      "id": "human:bone:024",
+      "index": 24,
+      "parent_id": "human:bone:023"
+    },
+    {
+      "display_name": "thumb_01_l",
+      "id": "human:bone:025",
+      "index": 25,
+      "parent_id": "human:bone:008"
+    },
+    {
+      "display_name": "thumb_02_l",
+      "id": "human:bone:026",
+      "index": 26,
+      "parent_id": "human:bone:025"
+    },
+    {
+      "display_name": "thumb_03_l",
+      "id": "human:bone:027",
+      "index": 27,
+      "parent_id": "human:bone:026"
+    },
+    {
+      "display_name": "thumb_04_leaf_l",
+      "id": "human:bone:028",
+      "index": 28,
+      "parent_id": "human:bone:027"
+    },
+    {
+      "display_name": "clavicle_r",
+      "id": "human:bone:029",
+      "index": 29,
+      "parent_id": "human:bone:004"
+    },
+    {
+      "display_name": "upperarm_r",
+      "id": "human:bone:030",
+      "index": 30,
+      "parent_id": "human:bone:029"
+    },
+    {
+      "display_name": "lowerarm_r",
+      "id": "human:bone:031",
+      "index": 31,
+      "parent_id": "human:bone:030"
+    },
+    {
+      "display_name": "hand_r",
+      "id": "human:bone:032",
+      "index": 32,
+      "parent_id": "human:bone:031"
+    },
+    {
+      "display_name": "index_01_r",
+      "id": "human:bone:033",
+      "index": 33,
+      "parent_id": "human:bone:032"
+    },
+    {
+      "display_name": "index_02_r",
+      "id": "human:bone:034",
+      "index": 34,
+      "parent_id": "human:bone:033"
+    },
+    {
+      "display_name": "index_03_r",
+      "id": "human:bone:035",
+      "index": 35,
+      "parent_id": "human:bone:034"
+    },
+    {
+      "display_name": "index_04_leaf_r",
+      "id": "human:bone:036",
+      "index": 36,
+      "parent_id": "human:bone:035"
+    },
+    {
+      "display_name": "middle_01_r",
+      "id": "human:bone:037",
+      "index": 37,
+      "parent_id": "human:bone:032"
+    },
+    {
+      "display_name": "middle_02_r",
+      "id": "human:bone:038",
+      "index": 38,
+      "parent_id": "human:bone:037"
+    },
+    {
+      "display_name": "middle_03_r",
+      "id": "human:bone:039",
+      "index": 39,
+      "parent_id": "human:bone:038"
+    },
+    {
+      "display_name": "middle_04_leaf_r",
+      "id": "human:bone:040",
+      "index": 40,
+      "parent_id": "human:bone:039"
+    },
+    {
+      "display_name": "pinky_01_r",
+      "id": "human:bone:041",
+      "index": 41,
+      "parent_id": "human:bone:032"
+    },
+    {
+      "display_name": "pinky_02_r",
+      "id": "human:bone:042",
+      "index": 42,
+      "parent_id": "human:bone:041"
+    },
+    {
+      "display_name": "pinky_03_r",
+      "id": "human:bone:043",
+      "index": 43,
+      "parent_id": "human:bone:042"
+    },
+    {
+      "display_name": "pinky_04_leaf_r",
+      "id": "human:bone:044",
+      "index": 44,
+      "parent_id": "human:bone:043"
+    },
+    {
+      "display_name": "ring_01_r",
+      "id": "human:bone:045",
+      "index": 45,
+      "parent_id": "human:bone:032"
+    },
+    {
+      "display_name": "ring_02_r",
+      "id": "human:bone:046",
+      "index": 46,
+      "parent_id": "human:bone:045"
+    },
+    {
+      "display_name": "ring_03_r",
+      "id": "human:bone:047",
+      "index": 47,
+      "parent_id": "human:bone:046"
+    },
+    {
+      "display_name": "ring_04_leaf_r",
+      "id": "human:bone:048",
+      "index": 48,
+      "parent_id": "human:bone:047"
+    },
+    {
+      "display_name": "thumb_01_r",
+      "id": "human:bone:049",
+      "index": 49,
+      "parent_id": "human:bone:032"
+    },
+    {
+      "display_name": "thumb_02_r",
+      "id": "human:bone:050",
+      "index": 50,
+      "parent_id": "human:bone:049"
+    },
+    {
+      "display_name": "thumb_03_r",
+      "id": "human:bone:051",
+      "index": 51,
+      "parent_id": "human:bone:050"
+    },
+    {
+      "display_name": "thumb_04_leaf_r",
+      "id": "human:bone:052",
+      "index": 52,
+      "parent_id": "human:bone:051"
+    },
+    {
+      "display_name": "neck_01",
+      "id": "human:bone:053",
+      "index": 53,
+      "parent_id": "human:bone:004"
+    },
+    {
+      "display_name": "head",
+      "id": "human:bone:054",
+      "index": 54,
+      "parent_id": "human:bone:053"
+    },
+    {
+      "display_name": "head_leaf",
+      "id": "human:bone:055",
+      "index": 55,
+      "parent_id": "human:bone:054"
+    },
+    {
+      "display_name": "thigh_l",
+      "id": "human:bone:056",
+      "index": 56,
+      "parent_id": "human:bone:001"
+    },
+    {
+      "display_name": "calf_l",
+      "id": "human:bone:057",
+      "index": 57,
+      "parent_id": "human:bone:056"
+    },
+    {
+      "display_name": "foot_l",
+      "id": "human:bone:058",
+      "index": 58,
+      "parent_id": "human:bone:057"
+    },
+    {
+      "display_name": "ball_l",
+      "id": "human:bone:059",
+      "index": 59,
+      "parent_id": "human:bone:058"
+    },
+    {
+      "display_name": "ball_leaf_l",
+      "id": "human:bone:060",
+      "index": 60,
+      "parent_id": "human:bone:059"
+    },
+    {
+      "display_name": "thigh_r",
+      "id": "human:bone:061",
+      "index": 61,
+      "parent_id": "human:bone:001"
+    },
+    {
+      "display_name": "calf_r",
+      "id": "human:bone:062",
+      "index": 62,
+      "parent_id": "human:bone:061"
+    },
+    {
+      "display_name": "foot_r",
+      "id": "human:bone:063",
+      "index": 63,
+      "parent_id": "human:bone:062"
+    },
+    {
+      "display_name": "ball_r",
+      "id": "human:bone:064",
+      "index": 64,
+      "parent_id": "human:bone:063"
+    },
+    {
+      "display_name": "ball_leaf_r",
+      "id": "human:bone:065",
+      "index": 65,
+      "parent_id": "human:bone:064"
+    }
+  ],
+  "channels": [
+    {
+      "bone_id": "human:bone:006",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            0.6167657850988187,
+            0.3046046701649659,
+            0.3163708266936386,
+            0.653242268429037
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.25,
+          "values": [
+            0.6167657850988187,
+            0.3046046701649659,
+            0.3163708266936386,
+            0.653242268429037
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.5,
+          "values": [
+            0.6167657850988187,
+            0.3046046701649659,
+            0.3163708266936386,
+            0.653242268429037
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.75,
+          "values": [
+            0.6167657850988187,
+            0.3046046701649659,
+            0.3163708266936386,
+            0.653242268429037
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1,
+          "values": [
+            0.6167657850988187,
+            0.3046046701649659,
+            0.3163708266936386,
+            0.653242268429037
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.25,
+          "values": [
+            0.6167657850988187,
+            0.3046046701649659,
+            0.3163708266936386,
+            0.653242268429037
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.5,
+          "values": [
+            0.6167657850988187,
+            0.3046046701649659,
+            0.3163708266936386,
+            0.653242268429037
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.75,
+          "values": [
+            0.6167657850988187,
+            0.3046046701649659,
+            0.3163708266936386,
+            0.653242268429037
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2,
+          "values": [
+            0.6167657850988187,
+            0.3046046701649659,
+            0.3163708266936386,
+            0.653242268429037
+          ]
+        }
+      ],
+      "property": "quaternion"
+    },
+    {
+      "bone_id": "human:bone:030",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            -0.2774117506407673,
+            -0.6294654772132944,
+            0.6388206402455207,
+            0.34456367074804517
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.25,
+          "values": [
+            -0.2774117506407673,
+            -0.6294654772132944,
+            0.6388206402455207,
+            0.34456367074804517
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.5,
+          "values": [
+            -0.2774117506407673,
+            -0.6294654772132944,
+            0.6388206402455207,
+            0.34456367074804517
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.75,
+          "values": [
+            -0.2774117506407673,
+            -0.6294654772132944,
+            0.6388206402455207,
+            0.34456367074804517
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1,
+          "values": [
+            -0.2774117506407673,
+            -0.6294654772132944,
+            0.6388206402455207,
+            0.34456367074804517
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.25,
+          "values": [
+            -0.2774117506407673,
+            -0.6294654772132944,
+            0.6388206402455207,
+            0.34456367074804517
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.5,
+          "values": [
+            -0.2774117506407673,
+            -0.6294654772132944,
+            0.6388206402455207,
+            0.34456367074804517
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.75,
+          "values": [
+            -0.2774117506407673,
+            -0.6294654772132944,
+            0.6388206402455207,
+            0.34456367074804517
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2,
+          "values": [
+            -0.2774117506407673,
+            -0.6294654772132944,
+            0.6388206402455207,
+            0.34456367074804517
+          ]
+        }
+      ],
+      "property": "quaternion"
+    },
+    {
+      "bone_id": "human:bone:007",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            0.019328719299724465,
+            -0.009738214145935184,
+            0.4556531468085278,
+            0.8898942507955463
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.25,
+          "values": [
+            0.019063575960532427,
+            0.010247549761608537,
+            -0.4676067865816171,
+            0.8836715797955113
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.5,
+          "values": [
+            0.019328719299724465,
+            -0.009738214145935184,
+            0.4556531468085278,
+            0.8898942507955463
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.75,
+          "values": [
+            0.019063575960532427,
+            0.010247549761608537,
+            -0.4676067865816171,
+            0.8836715797955113
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1,
+          "values": [
+            0.019328719299724465,
+            -0.009738214145935184,
+            0.4556531468085278,
+            0.8898942507955463
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.25,
+          "values": [
+            0.019063575960532427,
+            0.010247549761608537,
+            -0.4676067865816171,
+            0.8836715797955113
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.5,
+          "values": [
+            0.019328719299724465,
+            -0.009738214145935184,
+            0.4556531468085278,
+            0.8898942507955463
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.75,
+          "values": [
+            0.019063575960532427,
+            0.010247549761608537,
+            -0.4676067865816171,
+            0.8836715797955113
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2,
+          "values": [
+            0.019328719299724465,
+            -0.009738214145935184,
+            0.4556531468085278,
+            0.8898942507955463
+          ]
+        }
+      ],
+      "property": "quaternion"
+    },
+    {
+      "bone_id": "human:bone:031",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            0.021596709169296065,
+            -0.001419337555251479,
+            0.05905145708981536,
+            0.998020286892772
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.25,
+          "values": [
+            0.021596709169296065,
+            -0.001419337555251479,
+            0.05905145708981536,
+            0.998020286892772
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.5,
+          "values": [
+            0.021596709169296065,
+            -0.001419337555251479,
+            0.05905145708981536,
+            0.998020286892772
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.75,
+          "values": [
+            0.021596709169296065,
+            -0.001419337555251479,
+            0.05905145708981536,
+            0.998020286892772
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1,
+          "values": [
+            0.021596709169296065,
+            -0.001419337555251479,
+            0.05905145708981536,
+            0.998020286892772
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.25,
+          "values": [
+            0.021596709169296065,
+            -0.001419337555251479,
+            0.05905145708981536,
+            0.998020286892772
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.5,
+          "values": [
+            0.021596709169296065,
+            -0.001419337555251479,
+            0.05905145708981536,
+            0.998020286892772
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.75,
+          "values": [
+            0.021596709169296065,
+            -0.001419337555251479,
+            0.05905145708981536,
+            0.998020286892772
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2,
+          "values": [
+            0.021596709169296065,
+            -0.001419337555251479,
+            0.05905145708981536,
+            0.998020286892772
+          ]
+        }
+      ],
+      "property": "quaternion"
+    },
+    {
+      "bone_id": "human:bone:004",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            -0.0933236292459376,
+            -1.1900955359186526e-08,
+            -1.4058468721870883e-08,
+            0.9956358271096748
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.25,
+          "values": [
+            -0.049805781012214986,
+            -1.2502850079663124e-08,
+            -1.3525975792919353e-08,
+            0.9987589219515204
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.5,
+          "values": [
+            -0.0933236292459376,
+            -1.1900955359186526e-08,
+            -1.4058468721870883e-08,
+            0.9956358271096748
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.75,
+          "values": [
+            -0.1366638306472222,
+            -1.1276406493777632e-08,
+            -1.4564200556579204e-08,
+            0.9906174828826853
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1,
+          "values": [
+            -0.0933236292459376,
+            -1.1900955359186526e-08,
+            -1.4058468721870883e-08,
+            0.9956358271096748
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.25,
+          "values": [
+            -0.049805781012214986,
+            -1.2502850079663124e-08,
+            -1.3525975792919353e-08,
+            0.9987589219515204
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.5,
+          "values": [
+            -0.0933236292459376,
+            -1.1900955359186526e-08,
+            -1.4058468721870883e-08,
+            0.9956358271096748
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.75,
+          "values": [
+            -0.1366638306472222,
+            -1.1276406493777632e-08,
+            -1.4564200556579204e-08,
+            0.9906174828826853
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2,
+          "values": [
+            -0.0933236292459376,
+            -1.1900955359186526e-08,
+            -1.4058468721870883e-08,
+            0.9956358271096748
+          ]
+        }
+      ],
+      "property": "quaternion"
+    },
+    {
+      "bone_id": "human:bone:054",
+      "keyframes": [
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0,
+          "values": [
+            -0.20303071685144225,
+            6.1191135553771114e-09,
+            -3.1673639113689375e-08,
+            0.9791723688987494
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.25,
+          "values": [
+            -0.16873441316488078,
+            5.0099918929276825e-09,
+            -3.1867898371882515e-08,
+            0.9856615533812316
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.5,
+          "values": [
+            -0.20303071685144225,
+            6.1191135553771114e-09,
+            -3.1673639113689375e-08,
+            0.9791723688987494
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 0.75,
+          "values": [
+            -0.2370796588840047,
+            7.220780020536499e-09,
+            -3.1440790405186286e-08,
+            0.9714902137147048
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1,
+          "values": [
+            -0.20303071685144225,
+            6.1191135553771114e-09,
+            -3.1673639113689375e-08,
+            0.9791723688987494
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.25,
+          "values": [
+            -0.16873441316488078,
+            5.0099918929276825e-09,
+            -3.1867898371882515e-08,
+            0.9856615533812316
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.5,
+          "values": [
+            -0.20303071685144225,
+            6.1191135553771114e-09,
+            -3.1673639113689375e-08,
+            0.9791723688987494
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 1.75,
+          "values": [
+            -0.2370796588840047,
+            7.220780020536499e-09,
+            -3.1440790405186286e-08,
+            0.9714902137147048
+          ]
+        },
+        {
+          "interpolation": "slerp",
+          "time_seconds": 2,
+          "values": [
+            -0.20303071685144225,
+            6.1191135553771114e-09,
+            -3.1673639113689375e-08,
+            0.9791723688987494
+          ]
+        }
+      ],
+      "property": "quaternion"
+    }
+  ],
+  "clip": {
+    "duration_seconds": 2,
+    "name": "Agent_Wave_01_vision"
+  },
+  "revision": 14,
+  "rig": {
+    "fingerprint": "1a167d80d91326d763af6c04914790d814010341d843008129ca2102d7f4c31d",
+    "identifier": "human"
+  },
+  "schema_version": "animation-document/v1",
+  "validation": {
+    "errors": [],
+    "state": "valid"
+  }
+}
