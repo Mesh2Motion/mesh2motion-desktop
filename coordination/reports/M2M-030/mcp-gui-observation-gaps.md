@@ -32,6 +32,23 @@ automation cannot see it.
   session. `xdotool` was used only diagnostically to confirm why native Wayland cannot be automated
   that way, never as the solution.
 
+## New Animation keyframe editing fix (user-reported critical bug)
+
+The user reported that editing a bone's placement did not override the selected keyframe in the graph,
+and that `- Keyframe` could not remove an upper-arm key. Root cause: the value inputs, interpolation
+selector, gizmo writes and `remove_keyframe()` all used the **playhead time**, while the displayed
+values came from that time (interpolated), ignoring the keyframe the user had selected in the graph.
+
+Fixed in `src/newAnimation/keyframeEditor.ts`:
+- `selected_key()` resolves the actually selected keyframe (time, values, interpolation).
+- Value inputs, interpolation changes and gizmo edits now write to the selected keyframe's exact time
+  and display its exact stored values; they no longer create a stray keyframe at the playhead.
+- `- Keyframe` removes the selected keyframe, falling back to the nearest keyframe only when none is
+  selected, and re-renders the graph.
+- Regression test added: with the playhead at 0 s and keyframe 0.5 s selected, an edit overwrites
+  exactly 0.5 s (3 keys remain) and removal leaves keys `[0, 1]`. Frontend gates: 71 files / 480
+  tests, tsc, eslint, Vite all pass.
+
 ## Remaining limits
 
 - Bacon watcher does not terminate on its own; Cargo `check` inside it succeeds.
