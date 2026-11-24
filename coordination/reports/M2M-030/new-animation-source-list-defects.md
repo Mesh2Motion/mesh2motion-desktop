@@ -27,6 +27,32 @@ Branch state at report: frontend `9b5a659`, desktop integration `20acb743`.
   returned clip actually has tracks and that the converted document is installed as the active draft
   (issue 1).
 
+## Additional user bug (2026-11-24 06:19)
+
+Screenshot `Bilder/Bildschirmfotos/Bildschirmfoto_20261124_061929.png`:
+4. Rigs from **Dragon through Horse** in the New Animation rig selector do not load and do not expose
+   a skeleton. Selecting Horse shows `Rig change failed: rig Horse has no rigged model`; the viewport
+   still shows the previously loaded model. This appeared after the rig selector was expanded from 3
+   to 9 entries, so the selector now advertises rigs that `RigConfig` cannot load on this page.
+
+This must be fixed together with the source-list/phase issues.
+
+## Phase / rig-loading resolution (2026-11-24 06:25)
+
+- `scene_inspect`/`animations_list` returned `NOT_READY` because the New Animation page loads meshes
+  directly into the engine, leaving `load_model_step.vertex_count = 0`; `derive_phase()` therefore
+  never saw a loaded model. `EngineControlHost.observe()` now also counts
+  `engine.active_skinned_meshes()` (the provider-backed accessor). Verified after rebuild: on the
+  New Animation page `phase = ready`, `scene_inspect` and `animations_list` both return `ok:true`.
+- Additive `phaseInputs` diagnostics were exposed in the snapshot and `application_get_status`
+  (`first_frame_rendered`, `has_loaded_model`, `engine_attached`, `active_meshes`, `vertex_count`),
+  which made the root cause measurable.
+- Dragon/Spider/Snake/Horse have `model_variations = []` in the asset manifest but do ship
+  `model.glb`. `load_rig()` now falls back to `RigConfigEntry.model_file`, so all nine rigs can load
+  instead of reporting "has no rigged model".
+- All mandatory tools pass: Ruff, pytest (6), ty, ast-grep, bacon, BugStalker; tsc, 71 files / 484
+  Vitest tests, ESLint, Vite; cargo fmt, 63+3 MCP and 4 Tauri tests, Clippy -D warnings.
+
 ## Resolution (after documentation)
 
 - First attempted fix (reverted): using `StepAnimationsListing.library_entries()`. It made the list
