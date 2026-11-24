@@ -2,7 +2,7 @@
 
 ## Changes
 
-- `animation_import_draft` is the fast authoring path for a complete clip. A client reads `skeleton_get_catalog`, builds all channels from live bone IDs and local rest transforms, and submits one validated AnimationDocument instead of issuing one `animation_set_bone_keyframes` call per bone. Validation and atomic mutation remain in the existing Rust/authoring bridge. The request ceiling remains 256 KiB.
+- `animation_import_draft` is the fast initial-authoring path for a complete clip. A client reads `skeleton_get_catalog`, builds all channels from live bone IDs and local rest transforms, and submits one validated AnimationDocument instead of issuing one `animation_set_bone_keyframes` call per bone. Validation and atomic mutation remain in the existing Rust/authoring bridge. Import is rejected when that session already has an active draft; iterative edits continue through revisioned keyframe tools. The request ceiling remains 256 KiB.
 - The maintained Python MCP client now exposes `import_draft(document)` and requires structured revision metadata in the response. The helper does not generate a canned wave or bypass live-rig validation.
 - The New Animation GUI now shows MCP operation activity and result state. On completion it refreshes revision/channel controls and reapplies the current draft pose to the visible model.
 - Transform controls now take pointer capture only after a primary press actually starts a gizmo drag. They release/reset on pointer-up, pointer-cancel, lost capture, window blur, disable, and disconnect. Ordinary viewport presses remain available to OrbitControls and the user's normal pointer flow.

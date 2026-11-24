@@ -133,13 +133,14 @@ class McpStdioClient:
         return structured
 
     def import_draft(self, document: dict[str, Any]) -> dict[str, Any]:
-        """Create/replace a complete validated animation draft in one MCP call.
+        """Create an initial validated animation draft in one MCP call.
 
         Build channels from the live ``skeleton_get_catalog`` result and compose
         each authored delta with that bone's local rest transform before calling
         this method. The Rust authoring bridge validates the document against
-        the active rig and applies it atomically; no per-bone request loop is
-        needed.
+        the active rig and applies it atomically. This import is for a session
+        with no active draft; revise an existing draft through its revisioned
+        keyframe tools.
         """
         result = self.call_tool("animation_import_draft", {"document": document})
         structured = result.get("structuredContent")
